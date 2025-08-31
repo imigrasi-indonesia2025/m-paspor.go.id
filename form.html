@@ -8,6 +8,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .gradient-bg {
@@ -79,10 +80,141 @@
         .file-upload {
             background: rgba(255, 255, 255, 0.15);
             border: 2px dashed rgba(255, 255, 255, 0.5);
+            transition: all 0.3s ease;
         }
         .file-upload:hover {
             background: rgba(255, 255, 255, 0.25);
             border-color: rgba(255, 255, 255, 0.7);
+        }
+        .file-upload.dragover {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: #60a5fa;
+        }
+        .upload-progress {
+            height: 4px;
+            background-color: rgba(255, 255, 255, 0.3);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .upload-progress-bar {
+            height: 100%;
+            background-color: #3b82f6;
+            width: 0;
+            transition: width 0.3s ease;
+        }
+        .preview-image {
+            max-height: 200px;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .document-card {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .document-card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .file-preview {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+            object-fit: cover;
+            margin-right: 12px;
+        }
+        .file-details {
+            flex: 1;
+        }
+        .file-name {
+            font-weight: 500;
+            color: white;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .file-size {
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        .file-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .action-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .action-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .action-btn.delete:hover {
+            background: rgba(239, 68, 68, 0.5);
+        }
+        .upload-area {
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+        .upload-icon {
+            font-size: 32px;
+            color: white;
+            margin-bottom: 10px;
+        }
+        .upload-text {
+            color: white;
+            font-weight: 500;
+            margin-bottom: 5px;
+        }
+        .upload-subtext {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 14px;
+        }
+        .photo-requirements {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 12px;
+            margin-top: 12px;
+        }
+        .requirement-title {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: white;
+        }
+        .requirement-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .requirement-list li {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+            margin-bottom: 4px;
+            display: flex;
+            align-items: flex-start;
+        }
+        .requirement-list li:before {
+            content: "•";
+            margin-right: 8px;
+            color: rgba(255, 255, 255, 0.6);
         }
     </style>
 </head>
@@ -94,7 +226,6 @@
             <p class="text-gray-700 font-medium">Memproses...</p>
         </div>
     </div>
-
     <!-- Header -->
     <header class="glass-effect p-4 shadow-lg">
         <div class="max-w-6xl mx-auto flex items-center justify-between">
@@ -115,7 +246,6 @@
             </div>
         </div>
     </header>
-
     <!-- Progress Bar -->
     <div class="max-w-6xl mx-auto mt-4 px-4">
         <div class="glass-effect rounded-lg p-4">
@@ -142,7 +272,6 @@
             </div>
         </div>
     </div>
-
     <!-- Main Content -->
     <main class="max-w-6xl mx-auto p-4 mt-6">
         <form id="registrationForm">
@@ -292,7 +421,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Step 2: Documents -->
             <div id="step2" class="step-section hidden">
                 <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
@@ -300,39 +428,84 @@
                     
                     <div id="documentRequirements">
                         <!-- KTP -->
-                        <div class="mb-6">
-                            <label class="block text-white text-sm font-medium mb-2">KTP (Kartu Tanda Penduduk)</label>
-                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="ktpUpload">
-                                <input type="file" id="ktpFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload('ktpFile', 'ktpPreview')">
-                                <i class="fas fa-cloud-upload-alt text-4xl text-white mb-4"></i>
-                                <p class="text-white font-medium">Klik untuk upload KTP</p>
-                                <p class="text-blue-200 text-sm mt-2">Format: JPG, PNG, PDF (Max: 2MB)</p>
+                        <div class="mb-6 document-card">
+                            <div class="upload-area file-upload" id="ktpUploadArea">
+                                <input type="file" id="ktpFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload(event, 'ktp')">
+                                <i class="fas fa-id-card upload-icon"></i>
+                                <p class="upload-text">Upload KTP (Kartu Tanda Penduduk)</p>
+                                <p class="upload-subtext">Format: JPG, PNG, PDF (Max: 2MB)</p>
                             </div>
-                            <div id="ktpPreview" class="mt-4"></div>
+                            <div id="ktpPreview" class="hidden">
+                                <div class="file-info">
+                                    <img id="ktpPreviewImg" class="file-preview" src="" alt="KTP Preview">
+                                    <div class="file-details">
+                                        <div id="ktpFileName" class="file-name"></div>
+                                        <div id="ktpFileSize" class="file-size"></div>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button type="button" class="action-btn delete" onclick="removeFile('ktp')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="upload-progress hidden" id="ktpProgress">
+                                    <div class="upload-progress-bar" id="ktpProgressBar"></div>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Kartu Keluarga -->
-                        <div class="mb-6">
-                            <label class="block text-white text-sm font-medium mb-2">Kartu Keluarga</label>
-                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="kkUpload">
-                                <input type="file" id="kkFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload('kkFile', 'kkPreview')">
-                                <i class="fas fa-cloud-upload-alt text-4xl text-white mb-4"></i>
-                                <p class="text-white font-medium">Klik untuk upload Kartu Keluarga</p>
-                                <p class="text-blue-200 text-sm mt-2">Format: JPG, PNG, PDF (Max: 2MB)</p>
+                        <div class="mb-6 document-card">
+                            <div class="upload-area file-upload" id="kkUploadArea">
+                                <input type="file" id="kkFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload(event, 'kk')">
+                                <i class="fas fa-users upload-icon"></i>
+                                <p class="upload-text">Upload Kartu Keluarga</p>
+                                <p class="upload-subtext">Format: JPG, PNG, PDF (Max: 2MB)</p>
                             </div>
-                            <div id="kkPreview" class="mt-4"></div>
+                            <div id="kkPreview" class="hidden">
+                                <div class="file-info">
+                                    <img id="kkPreviewImg" class="file-preview" src="" alt="KK Preview">
+                                    <div class="file-details">
+                                        <div id="kkFileName" class="file-name"></div>
+                                        <div id="kkFileSize" class="file-size"></div>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button type="button" class="action-btn delete" onclick="removeFile('kk')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="upload-progress hidden" id="kkProgress">
+                                    <div class="upload-progress-bar" id="kkProgressBar"></div>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Akta Kelahiran -->
-                        <div class="mb-6">
-                            <label class="block text-white text-sm font-medium mb-2">Akta Kelahiran</label>
-                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="birthCertUpload">
-                                <input type="file" id="birthCertFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload('birthCertFile', 'birthCertPreview')">
-                                <i class="fas fa-cloud-upload-alt text-4xl text-white mb-4"></i>
-                                <p class="text-white font-medium">Klik untuk upload Akta Kelahiran</p>
-                                <p class="text-blue-200 text-sm mt-2">Format: JPG, PNG, PDF (Max: 2MB)</p>
+                        <div class="mb-6 document-card">
+                            <div class="upload-area file-upload" id="birthCertUploadArea">
+                                <input type="file" id="birthCertFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload(event, 'birthCert')">
+                                <i class="fas fa-certificate upload-icon"></i>
+                                <p class="upload-text">Upload Akta Kelahiran</p>
+                                <p class="upload-subtext">Format: JPG, PNG, PDF (Max: 2MB)</p>
                             </div>
-                            <div id="birthCertPreview" class="mt-4"></div>
+                            <div id="birthCertPreview" class="hidden">
+                                <div class="file-info">
+                                    <img id="birthCertPreviewImg" class="file-preview" src="" alt="Akta Kelahiran Preview">
+                                    <div class="file-details">
+                                        <div id="birthCertFileName" class="file-name"></div>
+                                        <div id="birthCertFileSize" class="file-size"></div>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button type="button" class="action-btn delete" onclick="removeFile('birthCert')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="upload-progress hidden" id="birthCertProgress">
+                                    <div class="upload-progress-bar" id="birthCertProgressBar"></div>
+                                </div>
+                            </div>
                         </div>
                         
                         <!-- Additional documents based on application type -->
@@ -342,21 +515,39 @@
                     <!-- Photo Section -->
                     <div class="mt-8">
                         <h3 class="text-xl font-bold text-white mb-4">Foto Paspor</h3>
-                        <div class="mb-6">
-                            <label class="block text-white text-sm font-medium mb-2">Foto Formal (4x6 cm)</label>
-                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="photoUpload">
-                                <input type="file" id="photoFile" accept="image/*" class="hidden" onchange="handleFileUpload('photoFile', 'photoPreview')">
-                                <i class="fas fa-camera text-4xl text-white mb-4"></i>
-                                <p class="text-white font-medium">Klik untuk upload foto</p>
-                                <p class="text-blue-200 text-sm mt-2">
-                                    Persyaratan foto:<br>
-                                    • Ukuran 4x6 cm<br>
-                                    • Latar belakang putih<br>
-                                    • Wajah menghadap kamera<br>
-                                    • Format: JPG, PNG (Max: 1MB)
-                                </p>
+                        <div class="mb-6 document-card">
+                            <div class="upload-area file-upload" id="photoUploadArea">
+                                <input type="file" id="photoFile" accept="image/*" class="hidden" onchange="handleFileUpload(event, 'photo')">
+                                <i class="fas fa-camera upload-icon"></i>
+                                <p class="upload-text">Upload Foto Formal (4x6 cm)</p>
+                                <p class="upload-subtext">Format: JPG, PNG (Max: 1MB)</p>
+                                <div class="photo-requirements">
+                                    <div class="requirement-title">Persyaratan foto:</div>
+                                    <ul class="requirement-list">
+                                        <li>Ukuran 4x6 cm</li>
+                                        <li>Latar belakang putih</li>
+                                        <li>Wajah menghadap kamera</li>
+                                        <li>Format: JPG, PNG (Max: 1MB)</li>
+                                    </ul>
+                                </div>
                             </div>
-                            <div id="photoPreview" class="mt-4"></div>
+                            <div id="photoPreview" class="hidden">
+                                <div class="file-info">
+                                    <img id="photoPreviewImg" class="file-preview" src="" alt="Foto Preview">
+                                    <div class="file-details">
+                                        <div id="photoFileName" class="file-name"></div>
+                                        <div id="photoFileSize" class="file-size"></div>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button type="button" class="action-btn delete" onclick="removeFile('photo')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="upload-progress hidden" id="photoProgress">
+                                    <div class="upload-progress-bar" id="photoProgressBar"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     
@@ -370,7 +561,6 @@
                     </div>
                 </div>
             </div>
-
             <!-- Step 3: Schedule -->
             <div id="step3" class="step-section hidden">
                 <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
@@ -402,7 +592,6 @@
             </div>
         </form>
     </main>
-
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -419,9 +608,16 @@
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
+        const storage = firebase.storage();
         
         let currentUser = null;
         let currentStep = 1;
+        let uploadedFiles = {
+            ktp: null,
+            kk: null,
+            birthCert: null,
+            photo: null
+        };
         
         // Check authentication
         auth.onAuthStateChanged((user) => {
@@ -552,11 +748,10 @@
                 }
             } else if (step === 2) {
                 // Validate documents
-                const requiredFiles = ['ktpFile', 'kkFile', 'birthCertFile', 'photoFile'];
+                const requiredFiles = ['ktp', 'kk', 'birthCert', 'photo'];
                 
-                for (const file of requiredFiles) {
-                    const element = document.getElementById(file);
-                    if (!element.files || element.files.length === 0) {
+                for (const fileType of requiredFiles) {
+                    if (!uploadedFiles[fileType]) {
                         isValid = false;
                         showAlert('Harap upload semua dokumen yang diperlukan');
                         break;
@@ -632,19 +827,48 @@
                 // Save application to Firestore
                 const docRef = await db.collection('applications').add(applicationData);
                 
-                // Save documents to Firestore (in a real app, you would upload to Firebase Storage)
-                const requiredFiles = ['ktpFile', 'kkFile', 'birthCertFile', 'photoFile'];
-                for (const fileId of requiredFiles) {
-                    const file = document.getElementById(fileId).files[0];
-                    if (file) {
-                        // In a real app, you would upload the file to Firebase Storage
-                        // and save the URL to Firestore
-                        await db.collection('documents').add({
-                            applicationId: docRef.id,
-                            type: fileId.replace('File', ''),
-                            name: file.name,
-                            size: file.size,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                // Upload files to Firebase Storage and save metadata to Firestore
+                const fileTypes = ['ktp', 'kk', 'birthCert', 'photo'];
+                for (const fileType of fileTypes) {
+                    if (uploadedFiles[fileType]) {
+                        const file = uploadedFiles[fileType].file;
+                        const storageRef = storage.ref(`applications/${docRef.id}/${fileType}/${file.name}`);
+                        
+                        // Upload file
+                        const uploadTask = storageRef.put(file);
+                        
+                        // Wait for upload to complete
+                        await new Promise((resolve, reject) => {
+                            uploadTask.on('state_changed', 
+                                (snapshot) => {
+                                    // Update progress bar
+                                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                                    updateUploadProgress(fileType, progress);
+                                },
+                                (error) => {
+                                    console.error('Error uploading file:', error);
+                                    reject(error);
+                                },
+                                () => {
+                                    // Upload completed successfully
+                                    uploadTask.snapshot.ref.getDownloadURL().then((downloadURL) => {
+                                        // Save file metadata to Firestore
+                                        db.collection('documents').add({
+                                            applicationId: docRef.id,
+                                            type: fileType,
+                                            name: file.name,
+                                            size: file.size,
+                                            url: downloadURL,
+                                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                                        }).then(() => {
+                                            resolve();
+                                        }).catch((error) => {
+                                            console.error('Error saving document metadata:', error);
+                                            reject(error);
+                                        });
+                                    });
+                                }
+                            );
                         });
                     }
                 }
@@ -702,39 +926,101 @@
         }
         
         // Function to handle file upload
-        function handleFileUpload(fileInputId, previewId) {
-            const fileInput = document.getElementById(fileInputId);
-            const preview = document.getElementById(previewId);
+        function handleFileUpload(event, fileType) {
+            const file = event.target.files[0];
+            if (!file) return;
             
-            if (fileInput.files && fileInput.files[0]) {
-                const file = fileInput.files[0];
-                const reader = new FileReader();
-                
-                reader.onload = function(e) {
-                    preview.innerHTML = `
-                        <div class="bg-white bg-opacity-90 rounded-lg p-4 flex items-center justify-between">
-                            <div class="flex items-center">
-                                <i class="fas fa-file text-blue-600 text-xl mr-3"></i>
-                                <div>
-                                    <div class="text-gray-800 font-medium">${file.name}</div>
-                                    <div class="text-gray-600 text-sm">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
-                                </div>
-                            </div>
-                            <button type="button" class="text-red-500 hover:text-red-700" onclick="removeFile('${fileInputId}', '${previewId}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                    `;
-                };
-                
-                reader.readAsDataURL(file);
+            // Validate file size
+            const maxSize = fileType === 'photo' ? 1 * 1024 * 1024 : 2 * 1024 * 1024; // 1MB for photo, 2MB for others
+            if (file.size > maxSize) {
+                showAlert(`Ukuran file terlalu besar. Maksimal ${fileType === 'photo' ? '1MB' : '2MB'}`);
+                event.target.value = '';
+                return;
             }
+            
+            // Validate file type
+            const validTypes = fileType === 'photo' 
+                ? ['image/jpeg', 'image/png'] 
+                : ['image/jpeg', 'image/png', 'application/pdf'];
+                
+            if (!validTypes.includes(file.type)) {
+                showAlert(`Format file tidak valid. Harap upload file ${fileType === 'photo' ? 'JPG atau PNG' : 'JPG, PNG, atau PDF'}`);
+                event.target.value = '';
+                return;
+            }
+            
+            // Store file reference
+            uploadedFiles[fileType] = {
+                file: file,
+                name: file.name,
+                size: file.size,
+                type: file.type
+            };
+            
+            // Show preview
+            showFilePreview(fileType, file);
+            
+            // Hide upload area and show preview
+            document.getElementById(`${fileType}UploadArea`).classList.add('hidden');
+            document.getElementById(`${fileType}Preview`).classList.remove('hidden');
+        }
+        
+        // Function to show file preview
+        function showFilePreview(fileType, file) {
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                // Update preview image
+                const previewImg = document.getElementById(`${fileType}PreviewImg`);
+                previewImg.src = e.target.result;
+                
+                // Update file name and size
+                document.getElementById(`${fileType}FileName`).textContent = file.name;
+                document.getElementById(`${fileType}FileSize`).textContent = formatFileSize(file.size);
+            };
+            
+            reader.readAsDataURL(file);
+        }
+        
+        // Function to format file size
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
         }
         
         // Function to remove uploaded file
-        function removeFile(fileInputId, previewId) {
-            document.getElementById(fileInputId).value = '';
-            document.getElementById(previewId).innerHTML = '';
+        function removeFile(fileType) {
+            // Clear file input
+            document.getElementById(`${fileType}File`).value = '';
+            
+            // Remove file reference
+            uploadedFiles[fileType] = null;
+            
+            // Hide preview and show upload area
+            document.getElementById(`${fileType}Preview`).classList.add('hidden');
+            document.getElementById(`${fileType}UploadArea`).classList.remove('hidden');
+            
+            // Reset progress bar
+            document.getElementById(`${fileType}ProgressBar`).style.width = '0%';
+            document.getElementById(`${fileType}Progress`).classList.add('hidden');
+        }
+        
+        // Function to update upload progress
+        function updateUploadProgress(fileType, progress) {
+            const progressBar = document.getElementById(`${fileType}ProgressBar`);
+            const progressContainer = document.getElementById(`${fileType}Progress`);
+            
+            progressBar.style.width = `${progress}%`;
+            progressContainer.classList.remove('hidden');
+            
+            if (progress >= 100) {
+                setTimeout(() => {
+                    progressContainer.classList.add('hidden');
+                }, 1000);
+            }
         }
         
         // Function to initialize schedule grid
@@ -882,6 +1168,38 @@
             timeInput.id = 'selectedTime';
             timeInput.name = 'selectedTime';
             document.getElementById('registrationForm').appendChild(timeInput);
+            
+            // Add click event listeners to upload areas
+            const uploadAreas = ['ktp', 'kk', 'birthCert', 'photo'];
+            uploadAreas.forEach(area => {
+                const uploadArea = document.getElementById(`${area}UploadArea`);
+                const fileInput = document.getElementById(`${area}File`);
+                
+                uploadArea.addEventListener('click', () => {
+                    fileInput.click();
+                });
+                
+                // Add drag and drop functionality
+                uploadArea.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+                
+                uploadArea.addEventListener('dragleave', () => {
+                    uploadArea.classList.remove('dragover');
+                });
+                
+                uploadArea.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    
+                    if (e.dataTransfer.files.length) {
+                        fileInput.files = e.dataTransfer.files;
+                        const event = new Event('change', { bubbles: true });
+                        fileInput.dispatchEvent(event);
+                    }
+                });
+            });
         });
     </script>
 </body>
