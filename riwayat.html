@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Riwayat Aktivitas - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .timeline-item {
+            position: relative;
+            padding-left: 2rem;
+        }
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: 0.5rem;
+            top: 0;
+            bottom: -1rem;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .timeline-item:last-child::before {
+            display: none;
+        }
+        .timeline-dot {
+            position: absolute;
+            left: 0;
+            top: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+        .status-pending { background-color: #f59e0b; }
+        .status-approved { background-color: #10b981; }
+        .status-payment { background-color: #3b82f6; }
+        .status-completed { background-color: #8b5cf6; }
+        .status-rejected { background-color: #ef4444; }
+        
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+        }
+        .modal {
+            backdrop-filter: blur(10px);
+        }
+        .activity-card {
+            transition: all 0.3s ease;
+        }
+        .activity-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-effect p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-2xl text-white hidden"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white">M-Paspor</h1>
+                    <p class="text-sm text-indigo-100">Riwayat Aktivitas</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="exportBtn" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-download mr-2"></i>Export
+                </button>
+                <a href="dashboard-user.html" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-arrow-left mr-2"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 mt-6">
+        <!-- Statistics Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+            <div class="glass-effect rounded-xl p-4 text-center fade-in">
+                <i class="fas fa-file-alt text-2xl text-blue-300 mb-2"></i>
+                <p class="text-white font-semibold" id="totalApplications">0</p>
+                <p class="text-indigo-200 text-sm">Total Permohonan</p>
+            </div>
+            <div class="glass-effect rounded-xl p-4 text-center fade-in">
+                <i class="fas fa-clock text-2xl text-yellow-300 mb-2"></i>
+                <p class="text-white font-semibold" id="pendingApplications">0</p>
+                <p class="text-indigo-200 text-sm">Menunggu</p>
+            </div>
+            <div class="glass-effect rounded-xl p-4 text-center fade-in">
+                <i class="fas fa-check-circle text-2xl text-green-300 mb-2"></i>
+                <p class="text-white font-semibold" id="approvedApplications">0</p>
+                <p class="text-indigo-200 text-sm">Disetujui</p>
+            </div>
+            <div class="glass-effect rounded-xl p-4 text-center fade-in">
+                <i class="fas fa-star text-2xl text-purple-300 mb-2"></i>
+                <p class="text-white font-semibold" id="completedApplications">0</p>
+                <p class="text-indigo-200 text-sm">Selesai</p>
+            </div>
+        </div>
+
+        <!-- Filters -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <h3 class="text-xl font-bold text-white mb-4">Filter & Pencarian</h3>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-white font-medium mb-2">Status</label>
+                    <select id="statusFilter" class="w-full px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Semua Status</option>
+                        <option value="pending">Menunggu</option>
+                        <option value="approved">Disetujui</option>
+                        <option value="payment">Pembayaran</option>
+                        <option value="completed">Selesai</option>
+                        <option value="rejected">Ditolak</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-white font-medium mb-2">Dari Tanggal</label>
+                    <input type="date" id="dateFrom" class="w-full px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-white font-medium mb-2">Sampai Tanggal</label>
+                    <input type="date" id="dateTo" class="w-full px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label class="block text-white font-medium mb-2">Pencarian</label>
+                    <input type="text" id="searchInput" placeholder="Cari nama, email..." class="w-full px-4 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="flex justify-end mt-4">
+                <button id="clearFilters" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors duration-300 mr-2">
+                    <i class="fas fa-times mr-2"></i>Reset
+                </button>
+                <button id="applyFilters" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-search mr-2"></i>Terapkan
+                </button>
+            </div>
+        </div>
+
+        <!-- Activity Timeline -->
+        <div class="glass-effect rounded-2xl p-6 fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-white">Timeline Aktivitas</h3>
+                <div class="flex items-center space-x-2">
+                    <button id="refreshBtn" class="bg-indigo-500 hover:bg-indigo-600 text-white px-3 py-2 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <select id="sortOrder" class="px-3 py-2 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white text-sm focus:outline-none">
+                        <option value="desc">Terbaru</option>
+                        <option value="asc">Terlama</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-8">
+                <i class="fas fa-spinner fa-spin text-3xl text-white mb-4"></i>
+                <p class="text-indigo-200">Memuat riwayat aktivitas...</p>
+            </div>
+
+            <!-- Empty State -->
+            <div id="emptyState" class="text-center py-8 hidden">
+                <i class="fas fa-history text-4xl text-indigo-300 mb-4"></i>
+                <p class="text-white text-lg mb-2">Belum Ada Aktivitas</p>
+                <p class="text-indigo-200">Mulai dengan membuat permohonan paspor pertama Anda</p>
+                <a href="dashboard-user.html" class="inline-block mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-plus mr-2"></i>Buat Permohonan
+                </a>
+            </div>
+
+            <!-- Activities List -->
+            <div id="activitiesList" class="space-y-4">
+                <!-- Activities will be loaded here -->
+            </div>
+
+            <!-- Load More Button -->
+            <div id="loadMoreContainer" class="text-center mt-6 hidden">
+                <button id="loadMoreBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-chevron-down mr-2"></i>Muat Lebih Banyak
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Detail Modal -->
+    <div id="detailModal" class="fixed inset-0 bg-black bg-opacity-50 modal hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between p-6 border-b">
+                <h3 class="text-xl font-bold text-gray-800">Detail Permohonan</h3>
+                <button id="closeDetailModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="p-6" id="modalContent">
+                <!-- Content will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Modal -->
+    <div id="exportModal" class="fixed inset-0 bg-black bg-opacity-50 modal hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Export Riwayat</h3>
+                <button id="closeExportModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Format Export</label>
+                    <select id="exportFormat" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="pdf">PDF</option>
+                        <option value="excel">Excel</option>
+                        <option value="csv">CSV</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 font-medium mb-2">Periode</label>
+                    <select id="exportPeriod" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="all">Semua Data</option>
+                        <option value="month">Bulan Ini</option>
+                        <option value="quarter">3 Bulan Terakhir</option>
+                        <option value="year">Tahun Ini</option>
+                    </select>
+                </div>
+
+                <div class="flex space-x-3 pt-4">
+                    <button id="cancelExport" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg transition-colors duration-300">
+                        Batal
+                    </button>
+                    <button id="confirmExport" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-download mr-2"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let allActivities = [];
+        let filteredActivities = [];
+        let currentPage = 0;
+        const itemsPerPage = 10;
+
+        // Check authentication
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                await loadActivities();
+                setupRealtimeListener();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Load activities from Firebase
+        async function loadActivities() {
+            try {
+                document.getElementById('loadingState').classList.remove('hidden');
+                document.getElementById('emptyState').classList.add('hidden');
+
+                // Load user's applications
+                const applicationsQuery = await db.collection('applications')
+                    .where('userId', '==', currentUser.uid)
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                allActivities = [];
+
+                applicationsQuery.forEach(doc => {
+                    const data = doc.data();
+                    
+                    // Add main application activity
+                    allActivities.push({
+                        id: doc.id,
+                        type: 'application_created',
+                        title: 'Permohonan Paspor Dibuat',
+                        description: `Permohonan paspor atas nama ${data.name} telah dibuat`,
+                        status: data.status,
+                        timestamp: data.createdAt,
+                        data: data,
+                        icon: 'fas fa-file-plus',
+                        color: 'blue'
+                    });
+
+                    // Add status change activities
+                    if (data.statusHistory) {
+                        data.statusHistory.forEach(history => {
+                            allActivities.push({
+                                id: doc.id + '_' + history.timestamp,
+                                type: 'status_change',
+                                title: getStatusChangeTitle(history.status),
+                                description: history.note || getStatusDescription(history.status),
+                                status: history.status,
+                                timestamp: history.timestamp,
+                                data: data,
+                                icon: getStatusIcon(history.status),
+                                color: getStatusColor(history.status)
+                            });
+                        });
+                    }
+
+                    // Add payment activity if exists
+                    if (data.paymentInfo && data.paymentInfo.createdAt) {
+                        allActivities.push({
+                            id: doc.id + '_payment',
+                            type: 'payment_created',
+                            title: 'Informasi Pembayaran Dibuat',
+                            description: `Silakan lakukan pembayaran sebesar Rp ${data.paymentInfo.amount?.toLocaleString('id-ID')}`,
+                            status: 'payment',
+                            timestamp: data.paymentInfo.createdAt,
+                            data: data,
+                            icon: 'fas fa-credit-card',
+                            color: 'green'
+                        });
+                    }
+                });
+
+                // Sort activities by timestamp
+                allActivities.sort((a, b) => {
+                    const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+                    const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+                    return timeB - timeA;
+                });
+
+                filteredActivities = [...allActivities];
+                updateStatistics();
+                displayActivities();
+
+                document.getElementById('loadingState').classList.add('hidden');
+
+                if (allActivities.length === 0) {
+                    document.getElementById('emptyState').classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error('Error loading activities:', error);
+                document.getElementById('loadingState').classList.add('hidden');
+                showAlert('Gagal memuat riwayat aktivitas');
+            }
+        }
+
+        // Setup realtime listener for new activities
+        function setupRealtimeListener() {
+            db.collection('applications')
+                .where('userId', '==', currentUser.uid)
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'modified') {
+                            // Reload activities when there's a change
+                            loadActivities();
+                        }
+                    });
+                });
+        }
+
+        // Update statistics
+        function updateStatistics() {
+            const stats = {
+                total: 0,
+                pending: 0,
+                approved: 0,
+                completed: 0
+            };
+
+            const uniqueApplications = new Set();
+            
+            allActivities.forEach(activity => {
+                if (activity.type === 'application_created') {
+                    uniqueApplications.add(activity.id);
+                    stats.total++;
+                    
+                    switch (activity.status) {
+                        case 'pending':
+                            stats.pending++;
+                            break;
+                        case 'approved':
+                        case 'payment':
+                            stats.approved++;
+                            break;
+                        case 'completed':
+                            stats.completed++;
+                            break;
+                    }
+                }
+            });
+
+            document.getElementById('totalApplications').textContent = stats.total;
+            document.getElementById('pendingApplications').textContent = stats.pending;
+            document.getElementById('approvedApplications').textContent = stats.approved;
+            document.getElementById('completedApplications').textContent = stats.completed;
+        }
+
+        // Display activities
+        function displayActivities() {
+            const container = document.getElementById('activitiesList');
+            const startIndex = currentPage * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const activitiesToShow = filteredActivities.slice(0, endIndex);
+
+            if (currentPage === 0) {
+                container.innerHTML = '';
+            }
+
+            activitiesToShow.slice(startIndex).forEach(activity => {
+                const activityElement = createActivityElement(activity);
+                container.appendChild(activityElement);
+            });
+
+            // Show/hide load more button
+            const loadMoreContainer = document.getElementById('loadMoreContainer');
+            if (endIndex < filteredActivities.length) {
+                loadMoreContainer.classList.remove('hidden');
+            } else {
+                loadMoreContainer.classList.add('hidden');
+            }
+        }
+
+        // Create activity element
+        function createActivityElement(activity) {
+            const div = document.createElement('div');
+            div.className = 'activity-card timeline-item glass-effect rounded-lg p-4 cursor-pointer';
+            
+            const timestamp = activity.timestamp?.toDate ? activity.timestamp.toDate() : new Date(activity.timestamp);
+            const timeString = timestamp.toLocaleString('id-ID', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            div.innerHTML = `
+                <div class="timeline-dot status-${activity.status}"></div>
+                <div class="flex items-start justify-between">
+                    <div class="flex-1">
+                        <div class="flex items-center space-x-2 mb-2">
+                            <i class="${activity.icon} text-${activity.color}-400"></i>
+                            <h4 class="text-white font-semibold">${activity.title}</h4>
+                            <span class="px-2 py-1 bg-${activity.color}-500 text-white text-xs rounded-full">
+                                ${getStatusLabel(activity.status)}
+                            </span>
+                        </div>
+                        <p class="text-indigo-200 text-sm mb-2">${activity.description}</p>
+                        <div class="flex items-center justify-between">
+                            <span class="text-indigo-300 text-xs">${timeString}</span>
+                            ${activity.data ? '<span class="text-blue-300 text-xs hover:text-blue-200">Klik untuk detail →</span>' : ''}
+                        </div>
+                        ${activity.status === 'payment' && activity.data?.paymentInfo ? `
+                            <div class="mt-3 p-3 bg-blue-500 bg-opacity-20 rounded-lg">
+                                <p class="text-blue-200 text-sm">
+                                    <i class="fas fa-info-circle mr-1"></i>
+                                    Batas waktu pembayaran: ${new Date(activity.data.paymentInfo.deadline.toDate()).toLocaleDateString('id-ID')}
+                                </p>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+
+            if (activity.data) {
+                div.addEventListener('click', () => showDetailModal(activity.data, activity.id));
+            }
+
+            return div;
+        }
+
+        // Show detail modal
+        function showDetailModal(data, activityId) {
+            const modal = document.getElementById('detailModal');
+            const content = document.getElementById('modalContent');
+            
+            const progress = getProgressPercentage(data.status);
+            const statusSteps = [
+                { key: 'pending', label: 'Menunggu Review', icon: 'fas fa-clock' },
+                { key: 'approved', label: 'Disetujui', icon: 'fas fa-check' },
+                { key: 'payment', label: 'Pembayaran', icon: 'fas fa-credit-card' },
+                { key: 'completed', label: 'Selesai', icon: 'fas fa-star' }
+            ];
+
+            content.innerHTML = `
+                <div class="space-y-6">
+                    <!-- Progress Bar -->
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-medium text-gray-700">Progress Permohonan</span>
+                            <span class="text-sm text-gray-500">${progress}%</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill bg-blue-500" style="width: ${progress}%"></div>
+                        </div>
+                        <div class="flex justify-between mt-3">
+                            ${statusSteps.map(step => `
+                                <div class="flex flex-col items-center ${data.status === step.key || getStatusOrder(data.status) > getStatusOrder(step.key) ? 'text-blue-600' : 'text-gray-400'}">
+                                    <i class="${step.icon} text-lg mb-1"></i>
+                                    <span class="text-xs text-center">${step.label}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Personal Information -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-800 mb-3">Informasi Pribadi</h4>
+                        <div class="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                                <span class="text-gray-600">Nama:</span>
+                                <p class="font-medium">${data.name}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Email:</span>
+                                <p class="font-medium">${data.email}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">Telepon:</span>
+                                <p class="font-medium">${data.phone || '-'}</p>
+                            </div>
+                            <div>
+                                <span class="text-gray-600">NIK:</span>
+                                <p class="font-medium">${data.nik || '-'}</p>
+                            </div>
+                            <div class="col-span-2">
+                                <span class="text-gray-600">Alamat:</span>
+                                <p class="font-medium">${data.address || '-'}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status Information -->
+                    <div class="bg-gray-50 rounded-lg p-4">
+                        <h4 class="font-semibold text-gray-800 mb-3">Status Permohonan</h4>
+                        <div class="flex items-center space-x-2 mb-2">
+                            <span class="px-3 py-1 bg-${getStatusColor(data.status)}-500 text-white text-sm rounded-full">
+                                ${getStatusLabel(data.status)}
+                            </span>
+                        </div>
+                        <p class="text-sm text-gray-600">${getStatusDescription(data.status)}</p>
+                    </div>
+
+                    ${data.paymentInfo ? `
+                        <div class="bg-blue-50 rounded-lg p-4">
+                            <h4 class="font-semibold text-gray-800 mb-3">Informasi Pembayaran</h4>
+                            <div class="space-y-2 text-sm">
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Jumlah:</span>
+                                    <span class="font-semibold">Rp ${data.paymentInfo.amount?.toLocaleString('id-ID')}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Bank:</span>
+                                    <span class="font-medium">${data.paymentInfo.bankName}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">No. Rekening:</span>
+                                    <span class="font-medium">${data.paymentInfo.accountNumber}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Atas Nama:</span>
+                                    <span class="font-medium">${data.paymentInfo.recipientName}</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-600">Batas Waktu:</span>
+                                    <span class="font-medium text-red-600">${new Date(data.paymentInfo.deadline.toDate()).toLocaleDateString('id-ID')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Actions -->
+                    <div class="flex space-x-3">
+                        ${data.status === 'payment' ? `
+                            <button onclick="window.open('pembayaran.html?id=${activityId}', '_blank')" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg transition-colors duration-300">
+                                <i class="fas fa-credit-card mr-2"></i>Bayar Sekarang
+                            </button>
+                        ` : ''}
+                        <button onclick="downloadReceipt('${activityId}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-download mr-2"></i>Download Bukti
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            modal.classList.remove('hidden');
+        }
+
+        // Filter functionality
+        document.getElementById('applyFilters').addEventListener('click', applyFilters);
+        document.getElementById('clearFilters').addEventListener('click', clearFilters);
+        document.getElementById('searchInput').addEventListener('input', debounce(applyFilters, 300));
+
+        function applyFilters() {
+            const statusFilter = document.getElementById('statusFilter').value;
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+
+            filteredActivities = allActivities.filter(activity => {
+                // Status filter
+                if (statusFilter && activity.status !== statusFilter) {
+                    return false;
+                }
+
+                // Date filter
+                const activityDate = activity.timestamp?.toDate ? activity.timestamp.toDate() : new Date(activity.timestamp);
+                if (dateFrom && activityDate < new Date(dateFrom)) {
+                    return false;
+                }
+                if (dateTo && activityDate > new Date(dateTo + 'T23:59:59')) {
+                    return false;
+                }
+
+                // Search filter
+                if (searchTerm) {
+                    const searchableText = `${activity.title} ${activity.description} ${activity.data?.name || ''} ${activity.data?.email || ''}`.toLowerCase();
+                    if (!searchableText.includes(searchTerm)) {
+                        return false;
+                    }
+                }
+
+                return true;
+            });
+
+            currentPage = 0;
+            displayActivities();
+        }
+
+        function clearFilters() {
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('searchInput').value = '';
+            
+            filteredActivities = [...allActivities];
+            currentPage = 0;
+            displayActivities();
+        }
+
+        // Load more functionality
+        document.getElementById('loadMoreBtn').addEventListener('click', () => {
+            currentPage++;
+            displayActivities();
+        });
+
+        // Refresh functionality
+        document.getElementById('refreshBtn').addEventListener('click', () => {
+            loadActivities();
+        });
+
+        // Sort functionality
+        document.getElementById('sortOrder').addEventListener('change', (e) => {
+            const order = e.target.value;
+            filteredActivities.sort((a, b) => {
+                const timeA = a.timestamp?.toDate ? a.timestamp.toDate() : new Date(a.timestamp);
+                const timeB = b.timestamp?.toDate ? b.timestamp.toDate() : new Date(b.timestamp);
+                return order === 'desc' ? timeB - timeA : timeA - timeB;
+            });
+            
+            currentPage = 0;
+            displayActivities();
+        });
+
+        // Export functionality
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            document.getElementById('exportModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeExportModal').addEventListener('click', () => {
+            document.getElementById('exportModal').classList.add('hidden');
+        });
+
+        document.getElementById('cancelExport').addEventListener('click', () => {
+            document.getElementById('exportModal').classList.add('hidden');
+        });
+
+        document.getElementById('confirmExport').addEventListener('click', () => {
+            const format = document.getElementById('exportFormat').value;
+            const period = document.getElementById('exportPeriod').value;
+            exportData(format, period);
+            document.getElementById('exportModal').classList.add('hidden');
+        });
+
+        // Modal close functionality
+        document.getElementById('closeDetailModal').addEventListener('click', () => {
+            document.getElementById('detailModal').classList.add('hidden');
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('detailModal').addEventListener('click', (e) => {
+            if (e.target.id === 'detailModal') {
+                document.getElementById('detailModal').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('exportModal').addEventListener('click', (e) => {
+            if (e.target.id === 'exportModal') {
+                document.getElementById('exportModal').classList.add('hidden');
+            }
+        });
+
+        // Utility functions
+        function getStatusLabel(status) {
+            const labels = {
+                pending: 'Menunggu',
+                approved: 'Disetujui',
+                payment: 'Pembayaran',
+                completed: 'Selesai',
+                rejected: 'Ditolak'
+            };
+            return labels[status] || status;
+        }
+
+        function getStatusDescription(status) {
+            const descriptions = {
+                pending: 'Permohonan sedang dalam proses review oleh admin',
+                approved: 'Permohonan telah disetujui, silakan lakukan pembayaran',
+                payment: 'Menunggu konfirmasi pembayaran',
+                completed: 'Permohonan telah selesai diproses',
+                rejected: 'Permohonan ditolak, silakan hubungi admin'
+            };
+            return descriptions[status] || 'Status tidak diketahui';
+        }
+
+        function getStatusChangeTitle(status) {
+            const titles = {
+                pending: 'Permohonan Dalam Review',
+                approved: 'Permohonan Disetujui',
+                payment: 'Menunggu Pembayaran',
+                completed: 'Permohonan Selesai',
+                rejected: 'Permohonan Ditolak'
+            };
+            return titles[status] || 'Status Berubah';
+        }
+
+        function getStatusIcon(status) {
+            const icons = {
+                pending: 'fas fa-clock',
+                approved: 'fas fa-check-circle',
+                payment: 'fas fa-credit-card',
+                completed: 'fas fa-star',
+                rejected: 'fas fa-times-circle'
+            };
+            return icons[status] || 'fas fa-info-circle';
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                pending: 'yellow',
+                approved: 'green',
+                payment: 'blue',
+                completed: 'purple',
+                rejected: 'red'
+            };
+            return colors[status] || 'gray';
+        }
+
+        function getProgressPercentage(status) {
+            const progress = {
+                pending: 25,
+                approved: 50,
+                payment: 75,
+                completed: 100,
+                rejected: 0
+            };
+            return progress[status] || 0;
+        }
+
+        function getStatusOrder(status) {
+            const order = {
+                pending: 1,
+                approved: 2,
+                payment: 3,
+                completed: 4,
+                rejected: 0
+            };
+            return order[status] || 0;
+        }
+
+        function exportData(format, period) {
+            // Filter data based on period
+            let dataToExport = [...filteredActivities];
+            
+            if (period !== 'all') {
+                const now = new Date();
+                let startDate;
+                
+                switch (period) {
+                    case 'month':
+                        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                        break;
+                    case 'quarter':
+                        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+                        break;
+                    case 'year':
+                        startDate = new Date(now.getFullYear(), 0, 1);
+                        break;
+                }
+                
+                dataToExport = dataToExport.filter(activity => {
+                    const activityDate = activity.timestamp?.toDate ? activity.timestamp.toDate() : new Date(activity.timestamp);
+                    return activityDate >= startDate;
+                });
+            }
+
+            // Create export content
+            const exportContent = dataToExport.map(activity => ({
+                Tanggal: (activity.timestamp?.toDate ? activity.timestamp.toDate() : new Date(activity.timestamp)).toLocaleDateString('id-ID'),
+                Aktivitas: activity.title,
+                Deskripsi: activity.description,
+                Status: getStatusLabel(activity.status),
+                Nama: activity.data?.name || '-',
+                Email: activity.data?.email || '-'
+            }));
+
+            // Generate download based on format
+            if (format === 'csv') {
+                downloadCSV(exportContent);
+            } else {
+                showAlert('Export ' + format.toUpperCase() + ' akan segera tersedia', 'info');
+            }
+        }
+
+        function downloadCSV(data) {
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
+            ].join('\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `riwayat-aktivitas-${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        }
+
+        function downloadReceipt(activityId) {
+            showAlert('Download bukti akan segera tersedia', 'info');
+        }
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-red-500'} text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9779d310445ea8f2',t:'MTc1NjYxNDk2MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

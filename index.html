@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M-Paspor - Login & Daftar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(-100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen flex items-center justify-center p-4">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-700 font-medium">Memproses...</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="w-full max-w-md">
+        <!-- Header -->
+        <div class="text-center mb-8 fade-in">
+            <div class="bg-white rounded-full w-20 h-20 mx-auto mb-4 flex items-center justify-center shadow-lg overflow-hidden">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-16 h-16 object-contain" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\'fas fa-passport text-3xl text-indigo-600\'></i>';">
+            </div>
+            <h1 class="text-3xl font-bold text-white mb-2">M-Paspor</h1>
+            <p class="text-indigo-100">Sistem Manajemen Paspor Digital</p>
+        </div>
+
+        <!-- Auth Container -->
+        <div class="glass-effect rounded-2xl p-8 shadow-2xl fade-in">
+            <!-- Tab Navigation -->
+            <div class="flex mb-6 bg-white bg-opacity-20 rounded-lg p-1">
+                <button id="loginTab" class="flex-1 py-2 px-4 rounded-md text-white font-medium transition-all duration-300 bg-white bg-opacity-30">
+                    Masuk
+                </button>
+                <button id="registerTab" class="flex-1 py-2 px-4 rounded-md text-white font-medium transition-all duration-300">
+                    Daftar
+                </button>
+            </div>
+
+            <!-- Login Form -->
+            <div id="loginForm" class="space-y-4">
+                <h2 class="text-2xl font-bold text-white mb-6 text-center">Masuk ke Akun</h2>
+                
+                <!-- Google Login Button -->
+                <button id="googleLoginBtn" class="w-full bg-white text-gray-700 py-3 px-4 rounded-lg font-medium flex items-center justify-center space-x-2 hover:bg-gray-50 transition-colors duration-300 shadow-md">
+                    <svg class="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    <span>Masuk dengan Google</span>
+                </button>
+
+                <div class="flex items-center my-4">
+                    <div class="flex-1 border-t border-white border-opacity-30"></div>
+                    <span class="px-4 text-white text-sm">atau</span>
+                    <div class="flex-1 border-t border-white border-opacity-30"></div>
+                </div>
+
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Email</label>
+                        <input type="email" id="loginEmail" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="Masukkan email Anda">
+                    </div>
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Kata Sandi</label>
+                        <div class="relative">
+                            <input type="password" id="loginPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="Masukkan kata sandi">
+                            <button type="button" id="toggleLoginPassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white opacity-70 hover:opacity-100">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between text-sm">
+                    <label class="flex items-center text-white">
+                        <input type="checkbox" class="mr-2 rounded">
+                        <span>Ingat saya</span>
+                    </label>
+                    <a href="#" class="text-white hover:underline">Lupa kata sandi?</a>
+                </div>
+
+                <button id="loginBtn" class="w-full bg-white text-indigo-600 py-3 px-4 rounded-lg font-bold hover:bg-opacity-90 transition-colors duration-300 shadow-md">
+                    Masuk
+                </button>
+            </div>
+
+            <!-- Register Form -->
+            <div id="registerForm" class="space-y-4 hidden">
+                <h2 class="text-2xl font-bold text-white mb-6 text-center">Daftar Akun Baru</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Nama Lengkap</label>
+                        <input type="text" id="registerName" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="Nama lengkap">
+                    </div>
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Tanggal Lahir</label>
+                        <input type="date" id="registerBirthDate" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Jenis Kelamin</label>
+                        <select id="registerGender" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50">
+                            <option value="">Pilih jenis kelamin</option>
+                            <option value="Laki-laki">Laki-laki</option>
+                            <option value="Perempuan">Perempuan</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">No. Telepon</label>
+                        <input type="tel" id="registerPhone" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="08xxxxxxxxxx">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-white text-sm font-medium mb-2">Email</label>
+                    <input type="email" id="registerEmail" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="email@example.com">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Kata Sandi</label>
+                        <div class="relative">
+                            <input type="password" id="registerPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="Minimal 6 karakter">
+                            <button type="button" id="toggleRegisterPassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white opacity-70 hover:opacity-100">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-white text-sm font-medium mb-2">Konfirmasi Kata Sandi</label>
+                        <div class="relative">
+                            <input type="password" id="registerConfirmPassword" class="w-full px-4 py-3 rounded-lg bg-white bg-opacity-20 border border-white border-opacity-30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-white focus:ring-opacity-50" placeholder="Ulangi kata sandi">
+                            <button type="button" id="toggleConfirmPassword" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-white opacity-70 hover:opacity-100">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center text-sm">
+                    <input type="checkbox" id="agreeTerms" class="mr-2 rounded">
+                    <label for="agreeTerms" class="text-white">
+                        Saya setuju dengan <a href="#" class="underline hover:text-gray-200">syarat dan ketentuan</a>
+                    </label>
+                </div>
+
+                <button id="registerBtn" class="w-full bg-white text-indigo-600 py-3 px-4 rounded-lg font-bold hover:bg-opacity-90 transition-colors duration-300 shadow-md">
+                    Daftar Sekarang
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-white text-sm opacity-80">
+            <p>&copy; 2024 M-Paspor. Semua hak dilindungi.</p>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // DOM Elements
+        const loginTab = document.getElementById('loginTab');
+        const registerTab = document.getElementById('registerTab');
+        const loginForm = document.getElementById('loginForm');
+        const registerForm = document.getElementById('registerForm');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+
+        // Tab Switching
+        loginTab.addEventListener('click', () => {
+            loginTab.classList.add('bg-white', 'bg-opacity-30');
+            registerTab.classList.remove('bg-white', 'bg-opacity-30');
+            loginForm.classList.remove('hidden');
+            registerForm.classList.add('hidden');
+            loginForm.classList.add('slide-in');
+        });
+
+        registerTab.addEventListener('click', () => {
+            registerTab.classList.add('bg-white', 'bg-opacity-30');
+            loginTab.classList.remove('bg-white', 'bg-opacity-30');
+            registerForm.classList.remove('hidden');
+            loginForm.classList.add('hidden');
+            registerForm.classList.add('slide-in');
+        });
+
+        // Password Toggle Functions
+        function setupPasswordToggle(toggleId, inputId) {
+            const toggle = document.getElementById(toggleId);
+            const input = document.getElementById(inputId);
+            
+            toggle.addEventListener('click', () => {
+                const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+                input.setAttribute('type', type);
+                toggle.innerHTML = type === 'password' ? '<i class="fas fa-eye"></i>' : '<i class="fas fa-eye-slash"></i>';
+            });
+        }
+
+        setupPasswordToggle('toggleLoginPassword', 'loginPassword');
+        setupPasswordToggle('toggleRegisterPassword', 'registerPassword');
+        setupPasswordToggle('toggleConfirmPassword', 'registerConfirmPassword');
+
+        // Show/Hide Loading
+        function showLoading() {
+            loadingOverlay.classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.add('hidden');
+        }
+
+        // Show Alert
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Google Sign In
+        document.getElementById('googleLoginBtn').addEventListener('click', async () => {
+            showLoading();
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                const result = await auth.signInWithPopup(provider);
+                const user = result.user;
+                
+                // Check user role in Firestore
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    redirectUser(userData.role);
+                } else {
+                    // Create new user document with default role
+                    await db.collection('users').doc(user.uid).set({
+                        name: user.displayName,
+                        email: user.email,
+                        role: 'user',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    redirectUser('user');
+                }
+            } catch (error) {
+                hideLoading();
+                showAlert('Gagal masuk dengan Google: ' + error.message);
+            }
+        });
+
+        // Email/Password Login
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            if (!email || !password) {
+                showAlert('Mohon isi semua field');
+                return;
+            }
+
+            showLoading();
+            try {
+                const result = await auth.signInWithEmailAndPassword(email, password);
+                const user = result.user;
+                
+                // Get user role from Firestore
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const userData = userDoc.data();
+                
+                redirectUser(userData.role);
+            } catch (error) {
+                hideLoading();
+                showAlert('Gagal masuk: ' + error.message);
+            }
+        });
+
+        // Registration
+        document.getElementById('registerBtn').addEventListener('click', async () => {
+            const name = document.getElementById('registerName').value;
+            const birthDate = document.getElementById('registerBirthDate').value;
+            const gender = document.getElementById('registerGender').value;
+            const phone = document.getElementById('registerPhone').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+            const confirmPassword = document.getElementById('registerConfirmPassword').value;
+            const agreeTerms = document.getElementById('agreeTerms').checked;
+
+            // Validation
+            if (!name || !birthDate || !gender || !phone || !email || !password || !confirmPassword) {
+                showAlert('Mohon isi semua field');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showAlert('Konfirmasi kata sandi tidak cocok');
+                return;
+            }
+
+            if (password.length < 6) {
+                showAlert('Kata sandi minimal 6 karakter');
+                return;
+            }
+
+            if (!agreeTerms) {
+                showAlert('Mohon setujui syarat dan ketentuan');
+                return;
+            }
+
+            showLoading();
+            try {
+                const result = await auth.createUserWithEmailAndPassword(email, password);
+                const user = result.user;
+
+                // Save user data to Firestore
+                await db.collection('users').doc(user.uid).set({
+                    name: name,
+                    email: email,
+                    birthDate: birthDate,
+                    gender: gender,
+                    phone: phone,
+                    role: 'user', // Default role
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showAlert('Pendaftaran berhasil!', 'success');
+                redirectUser('user');
+            } catch (error) {
+                hideLoading();
+                showAlert('Gagal mendaftar: ' + error.message);
+            }
+        });
+
+        // Redirect based on role
+        function redirectUser(role) {
+            hideLoading();
+            if (role === 'admin') {
+                window.location.href = 'dashboard-admin.html';
+            } else {
+                window.location.href = 'dashboard-user.html';
+            }
+        }
+
+        // Check if user is already logged in
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                showLoading();
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists) {
+                        const userData = userDoc.data();
+                        redirectUser(userData.role);
+                    }
+                } catch (error) {
+                    hideLoading();
+                    console.error('Error checking user role:', error);
+                }
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'97799665664f5888',t:'MTc1NjYxMjQ3Ni4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

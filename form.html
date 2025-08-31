@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pendaftaran Paspor - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(30, 58, 138, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .form-input, .form-select, .form-textarea {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1f2937;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+        }
+        .form-input::placeholder, .form-select::placeholder, .form-textarea::placeholder {
+            color: #6b7280;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .schedule-item, .time-slot-item {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .schedule-item:hover, .time-slot-item:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .schedule-item.selected, .time-slot-item.selected {
+            background: rgba(59, 130, 246, 0.5);
+            border-color: #60a5fa;
+        }
+        .file-upload {
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px dashed rgba(255, 255, 255, 0.5);
+        }
+        .file-upload:hover {
+            background: rgba(255, 255, 255, 0.25);
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-700 font-medium">Memproses...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="glass-effect p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <button onclick="goBack()" class="text-white hover:text-blue-200 transition-colors duration-300">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-2xl text-white hidden"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white">M-Paspor</h1>
+                    <p class="text-sm text-blue-200">Formulir Pendaftaran</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-white">
+                <i class="fas fa-user-circle text-2xl"></i>
+                <span id="userName" class="font-medium">Loading...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="max-w-6xl mx-auto mt-4 px-4">
+        <div class="glass-effect rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-white text-sm font-medium">Progress Pendaftaran</span>
+                <span class="text-white text-sm font-medium" id="progressText">Step 1 dari 3</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2.5">
+                <div class="bg-blue-500 h-2.5 rounded-full" id="progressBar" style="width: 33%"></div>
+            </div>
+            <div class="flex justify-between mt-2">
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto text-sm font-bold">1</div>
+                    <span class="text-white text-xs mt-1">Data Pribadi</span>
+                </div>
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-gray-600 text-gray-300 flex items-center justify-center mx-auto text-sm font-bold">2</div>
+                    <span class="text-gray-300 text-xs mt-1">Dokumen</span>
+                </div>
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-gray-600 text-gray-300 flex items-center justify-center mx-auto text-sm font-bold">3</div>
+                    <span class="text-gray-300 text-xs mt-1">Jadwal</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 mt-6">
+        <form id="registrationForm">
+            <!-- Step 1: Personal Data -->
+            <div id="step1" class="step-section">
+                <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                    <h2 class="text-2xl font-bold text-white mb-6">Data Pribadi</h2>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Jenis Permohonan</label>
+                            <select class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="applicationType" required onchange="updateApplicationFields()">
+                                <option value="">Pilih jenis permohonan</option>
+                                <option value="paspor-baru">Paspor Baru</option>
+                                <option value="perpanjang-paspor">Perpanjang Paspor</option>
+                                <option value="paspor-hilang">Paspor Hilang</option>
+                                <option value="paspor-rusak">Paspor Rusak</option>
+                                <option value="paspor-beda-data">Paspor Beda Data</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Nama Lengkap</label>
+                            <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="fullName" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">NIK</label>
+                            <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="nik" maxlength="16" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Tempat Lahir</label>
+                            <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="birthPlace" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Tanggal Lahir</label>
+                            <input type="date" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="birthDate" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Jenis Kelamin</label>
+                            <select class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="gender" required>
+                                <option value="">Pilih jenis kelamin</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Status Perkawinan</label>
+                            <select class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="maritalStatus" required>
+                                <option value="">Pilih status</option>
+                                <option value="belum-kawin">Belum Kawin</option>
+                                <option value="kawin">Kawin</option>
+                                <option value="cerai-hidup">Cerai Hidup</option>
+                                <option value="cerai-mati">Cerai Mati</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Nomor Telepon</label>
+                            <input type="tel" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="phone" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Email</label>
+                            <input type="email" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="email" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Pekerjaan</label>
+                            <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="occupation" required>
+                        </div>
+                        <div>
+                            <label class="block text-white text-sm font-medium mb-2">Pendidikan Terakhir</label>
+                            <select class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="education" required>
+                                <option value="">Pilih pendidikan</option>
+                                <option value="SD">SD</option>
+                                <option value="SMP">SMP</option>
+                                <option value="SMA">SMA</option>
+                                <option value="D3">D3</option>
+                                <option value="S1">S1</option>
+                                <option value="S2">S2</option>
+                                <option value="S3">S3</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-6">
+                        <label class="block text-white text-sm font-medium mb-2">Alamat Lengkap</label>
+                        <textarea class="w-full px-4 py-3 rounded-lg form-textarea focus:outline-none" id="address" rows="3" required></textarea>
+                    </div>
+                    
+                    <!-- Additional fields for specific passport types -->
+                    <div id="additionalFields" class="mt-6 hidden">
+                        <div id="extendPassportFields" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-white text-sm font-medium mb-2">Nomor Paspor Lama</label>
+                                    <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="extendPassportNumber">
+                                </div>
+                                <div>
+                                    <label class="block text-white text-sm font-medium mb-2">Tanggal Berakhir Paspor</label>
+                                    <input type="date" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="passportExpiryDate">
+                                </div>
+                            </div>
+                        </div>
+                        <div id="lostPassportFields" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-white text-sm font-medium mb-2">Nomor Paspor Lama</label>
+                                    <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="oldPassportNumber">
+                                </div>
+                                <div>
+                                    <label class="block text-white text-sm font-medium mb-2">Tanggal Hilang</label>
+                                    <input type="date" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="lostDate">
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-white text-sm font-medium mb-2">Tempat Hilang</label>
+                                <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="lostPlace">
+                            </div>
+                        </div>
+                        <div id="damagedPassportFields" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-white text-sm font-medium mb-2">Nomor Paspor Lama</label>
+                                    <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="damagedPassportNumber">
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-white text-sm font-medium mb-2">Jenis Kerusakan</label>
+                                <textarea class="w-full px-4 py-3 rounded-lg form-textarea focus:outline-none" id="damageDescription" rows="3"></textarea>
+                            </div>
+                        </div>
+                        <div id="dataChangeFields" class="hidden">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-white text-sm font-medium mb-2">Nomor Paspor Lama</label>
+                                    <input type="text" class="w-full px-4 py-3 rounded-lg form-input focus:outline-none" id="changePassportNumber">
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label class="block text-white text-sm font-medium mb-2">Data yang Diubah</label>
+                                <textarea class="w-full px-4 py-3 rounded-lg form-textarea focus:outline-none" id="dataChanges" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end mt-8">
+                        <button type="button" class="btn-primary px-6 py-3 rounded-lg font-bold shadow-md" onclick="nextStep(1)">
+                            Lanjut ke Dokumen <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Documents -->
+            <div id="step2" class="step-section hidden">
+                <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                    <h2 class="text-2xl font-bold text-white mb-6">Dokumen Persyaratan</h2>
+                    
+                    <div id="documentRequirements">
+                        <!-- KTP -->
+                        <div class="mb-6">
+                            <label class="block text-white text-sm font-medium mb-2">KTP (Kartu Tanda Penduduk)</label>
+                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="ktpUpload">
+                                <input type="file" id="ktpFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload('ktpFile', 'ktpPreview')">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-white mb-4"></i>
+                                <p class="text-white font-medium">Klik untuk upload KTP</p>
+                                <p class="text-blue-200 text-sm mt-2">Format: JPG, PNG, PDF (Max: 2MB)</p>
+                            </div>
+                            <div id="ktpPreview" class="mt-4"></div>
+                        </div>
+                        
+                        <!-- Kartu Keluarga -->
+                        <div class="mb-6">
+                            <label class="block text-white text-sm font-medium mb-2">Kartu Keluarga</label>
+                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="kkUpload">
+                                <input type="file" id="kkFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload('kkFile', 'kkPreview')">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-white mb-4"></i>
+                                <p class="text-white font-medium">Klik untuk upload Kartu Keluarga</p>
+                                <p class="text-blue-200 text-sm mt-2">Format: JPG, PNG, PDF (Max: 2MB)</p>
+                            </div>
+                            <div id="kkPreview" class="mt-4"></div>
+                        </div>
+                        
+                        <!-- Akta Kelahiran -->
+                        <div class="mb-6">
+                            <label class="block text-white text-sm font-medium mb-2">Akta Kelahiran</label>
+                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="birthCertUpload">
+                                <input type="file" id="birthCertFile" accept="image/*,.pdf" class="hidden" onchange="handleFileUpload('birthCertFile', 'birthCertPreview')">
+                                <i class="fas fa-cloud-upload-alt text-4xl text-white mb-4"></i>
+                                <p class="text-white font-medium">Klik untuk upload Akta Kelahiran</p>
+                                <p class="text-blue-200 text-sm mt-2">Format: JPG, PNG, PDF (Max: 2MB)</p>
+                            </div>
+                            <div id="birthCertPreview" class="mt-4"></div>
+                        </div>
+                        
+                        <!-- Additional documents based on application type -->
+                        <div id="additionalDocuments"></div>
+                    </div>
+                    
+                    <!-- Photo Section -->
+                    <div class="mt-8">
+                        <h3 class="text-xl font-bold text-white mb-4">Foto Paspor</h3>
+                        <div class="mb-6">
+                            <label class="block text-white text-sm font-medium mb-2">Foto Formal (4x6 cm)</label>
+                            <div class="file-upload rounded-lg p-6 text-center cursor-pointer transition-colors duration-300" id="photoUpload">
+                                <input type="file" id="photoFile" accept="image/*" class="hidden" onchange="handleFileUpload('photoFile', 'photoPreview')">
+                                <i class="fas fa-camera text-4xl text-white mb-4"></i>
+                                <p class="text-white font-medium">Klik untuk upload foto</p>
+                                <p class="text-blue-200 text-sm mt-2">
+                                    Persyaratan foto:<br>
+                                    • Ukuran 4x6 cm<br>
+                                    • Latar belakang putih<br>
+                                    • Wajah menghadap kamera<br>
+                                    • Format: JPG, PNG (Max: 1MB)
+                                </p>
+                            </div>
+                            <div id="photoPreview" class="mt-4"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between mt-8">
+                        <button type="button" class="btn-secondary px-6 py-3 rounded-lg font-bold" onclick="previousStep(2)">
+                            <i class="fas fa-arrow-left mr-2"></i> Kembali
+                        </button>
+                        <button type="button" class="btn-primary px-6 py-3 rounded-lg font-bold shadow-md" onclick="nextStep(2)">
+                            Lanjut ke Jadwal <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Schedule -->
+            <div id="step3" class="step-section hidden">
+                <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                    <h2 class="text-2xl font-bold text-white mb-6">Jadwal Kedatangan</h2>
+                    
+                    <div class="mb-6">
+                        <label class="block text-white text-sm font-medium mb-2">Tanggal Kedatangan</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="scheduleGrid">
+                            <!-- Schedule items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="mb-6" id="timeSlotGroup" style="display: none;">
+                        <label class="block text-white text-sm font-medium mb-2">Jam Kedatangan</label>
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="timeSlotGrid">
+                            <!-- Time slot items will be populated by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between mt-8">
+                        <button type="button" class="btn-secondary px-6 py-3 rounded-lg font-bold" onclick="previousStep(3)">
+                            <i class="fas fa-arrow-left mr-2"></i> Kembali
+                        </button>
+                        <button type="button" class="btn-primary px-6 py-3 rounded-lg font-bold shadow-md" onclick="submitForm()">
+                            Pilih Lokasi & Kirim <i class="fas fa-arrow-right ml-2"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </main>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        let currentUser = null;
+        let currentStep = 1;
+        
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loadUserData();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+        
+        // Load user data
+        async function loadUserData() {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || currentUser.email;
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+        
+        // Function to navigate to the next step
+        function nextStep(step) {
+            // Validate current step before proceeding
+            if (!validateStep(step)) {
+                return;
+            }
+            
+            // Hide current step
+            document.getElementById(`step${step}`).classList.add('hidden');
+            
+            // Show next step
+            document.getElementById(`step${step + 1}`).classList.remove('hidden');
+            
+            // Update progress bar
+            updateProgressBar(step + 1);
+            
+            // If moving to step 3 (Schedule), load schedule data
+            if (step + 1 === 3) {
+                initializeScheduleGrid();
+            }
+        }
+        
+        // Function to navigate to the previous step
+        function previousStep(step) {
+            // Hide current step
+            document.getElementById(`step${step}`).classList.add('hidden');
+            
+            // Show previous step
+            document.getElementById(`step${step - 1}`).classList.remove('hidden');
+            
+            // Update progress bar
+            updateProgressBar(step - 1);
+        }
+        
+        // Function to update progress bar
+        function updateProgressBar(step) {
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressPercentage = (step / 3) * 100;
+            
+            progressBar.style.width = `${progressPercentage}%`;
+            progressText.textContent = `Step ${step} dari 3`;
+            
+            // Update step indicators
+            for (let i = 1; i <= 3; i++) {
+                const stepElement = document.querySelector(`#step${i} .w-8.h-8.rounded-full`);
+                const stepText = document.querySelector(`#step${step} .text-xs.mt-1`);
+                
+                if (i < step) {
+                    stepElement.classList.remove('bg-gray-600', 'text-gray-300');
+                    stepElement.classList.add('bg-green-500', 'text-white');
+                    stepText.classList.remove('text-gray-300');
+                    stepText.classList.add('text-white');
+                } else if (i === step) {
+                    stepElement.classList.remove('bg-gray-600', 'text-gray-300');
+                    stepElement.classList.add('bg-blue-600', 'text-white');
+                    stepText.classList.remove('text-gray-300');
+                    stepText.classList.add('text-white');
+                } else {
+                    stepElement.classList.remove('bg-blue-600', 'text-white', 'bg-green-500');
+                    stepElement.classList.add('bg-gray-600', 'text-gray-300');
+                    stepText.classList.remove('text-white');
+                    stepText.classList.add('text-gray-300');
+                }
+            }
+        }
+        
+        // Function to validate current step
+        function validateStep(step) {
+            let isValid = true;
+            
+            if (step === 1) {
+                // Validate personal data
+                const requiredFields = ['applicationType', 'fullName', 'nik', 'birthPlace', 'birthDate', 'gender', 'maritalStatus', 'address', 'phone', 'email', 'occupation', 'education'];
+                
+                for (const field of requiredFields) {
+                    const element = document.getElementById(field);
+                    if (!element.value.trim()) {
+                        element.classList.add('border-red-500');
+                        isValid = false;
+                    } else {
+                        element.classList.remove('border-red-500');
+                    }
+                }
+                
+                // Validate additional fields based on application type
+                const applicationType = document.getElementById('applicationType').value;
+                if (applicationType === 'perpanjang-paspor') {
+                    if (!document.getElementById('extendPassportNumber').value.trim() || !document.getElementById('passportExpiryDate').value) {
+                        isValid = false;
+                    }
+                } else if (applicationType === 'paspor-hilang') {
+                    if (!document.getElementById('oldPassportNumber').value.trim() || !document.getElementById('lostDate').value || !document.getElementById('lostPlace').value.trim()) {
+                        isValid = false;
+                    }
+                } else if (applicationType === 'paspor-rusak') {
+                    if (!document.getElementById('damagedPassportNumber').value.trim() || !document.getElementById('damageDescription').value.trim()) {
+                        isValid = false;
+                    }
+                } else if (applicationType === 'paspor-beda-data') {
+                    if (!document.getElementById('changePassportNumber').value.trim() || !document.getElementById('dataChanges').value.trim()) {
+                        isValid = false;
+                    }
+                }
+            } else if (step === 2) {
+                // Validate documents
+                const requiredFiles = ['ktpFile', 'kkFile', 'birthCertFile', 'photoFile'];
+                
+                for (const file of requiredFiles) {
+                    const element = document.getElementById(file);
+                    if (!element.files || element.files.length === 0) {
+                        isValid = false;
+                        showAlert('Harap upload semua dokumen yang diperlukan');
+                        break;
+                    }
+                }
+            } else if (step === 3) {
+                // Validate schedule
+                const selectedDate = document.querySelector('.schedule-item.selected');
+                const selectedTime = document.querySelector('.time-slot-item.selected');
+                
+                if (!selectedDate || !selectedTime) {
+                    isValid = false;
+                    showAlert('Harap pilih tanggal dan jam kedatangan');
+                }
+            }
+            
+            return isValid;
+        }
+        
+        // Function to submit the form
+        async function submitForm() {
+            // Validate schedule selection
+            const selectedDate = document.querySelector('.schedule-item.selected');
+            const selectedTime = document.querySelector('.time-slot-item.selected');
+            
+            if (!selectedDate || !selectedTime) {
+                showAlert('Harap pilih tanggal dan jam kedatangan');
+                return;
+            }
+            
+            // Show loading screen
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            
+            try {
+                // Collect form data
+                const applicationData = {
+                    userId: currentUser.uid,
+                    applicationType: document.getElementById('applicationType').value,
+                    fullName: document.getElementById('fullName').value,
+                    nik: document.getElementById('nik').value,
+                    birthPlace: document.getElementById('birthPlace').value,
+                    birthDate: document.getElementById('birthDate').value,
+                    gender: document.getElementById('gender').value,
+                    maritalStatus: document.getElementById('maritalStatus').value,
+                    address: document.getElementById('address').value,
+                    phone: document.getElementById('phone').value,
+                    email: document.getElementById('email').value,
+                    occupation: document.getElementById('occupation').value,
+                    education: document.getElementById('education').value,
+                    appointmentDate: document.getElementById('selectedDate').value,
+                    appointmentTime: document.getElementById('selectedTime').value,
+                    status: 'pending',
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                
+                // Add additional fields based on application type
+                const applicationType = document.getElementById('applicationType').value;
+                if (applicationType === 'perpanjang-paspor') {
+                    applicationData.extendPassportNumber = document.getElementById('extendPassportNumber').value;
+                    applicationData.passportExpiryDate = document.getElementById('passportExpiryDate').value;
+                } else if (applicationType === 'paspor-hilang') {
+                    applicationData.oldPassportNumber = document.getElementById('oldPassportNumber').value;
+                    applicationData.lostDate = document.getElementById('lostDate').value;
+                    applicationData.lostPlace = document.getElementById('lostPlace').value;
+                } else if (applicationType === 'paspor-rusak') {
+                    applicationData.damagedPassportNumber = document.getElementById('damagedPassportNumber').value;
+                    applicationData.damageDescription = document.getElementById('damageDescription').value;
+                } else if (applicationType === 'paspor-beda-data') {
+                    applicationData.changePassportNumber = document.getElementById('changePassportNumber').value;
+                    applicationData.dataChanges = document.getElementById('dataChanges').value;
+                }
+                
+                // Save application to Firestore
+                const docRef = await db.collection('applications').add(applicationData);
+                
+                // Save documents to Firestore (in a real app, you would upload to Firebase Storage)
+                const requiredFiles = ['ktpFile', 'kkFile', 'birthCertFile', 'photoFile'];
+                for (const fileId of requiredFiles) {
+                    const file = document.getElementById(fileId).files[0];
+                    if (file) {
+                        // In a real app, you would upload the file to Firebase Storage
+                        // and save the URL to Firestore
+                        await db.collection('documents').add({
+                            applicationId: docRef.id,
+                            type: fileId.replace('File', ''),
+                            name: file.name,
+                            size: file.size,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                }
+                
+                // Hide loading screen
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                
+                // Show success message
+                showAlert('Permohonan berhasil disimpan!', 'success');
+                
+                // Redirect to lokasi.html
+                setTimeout(() => {
+                    window.location.href = 'lokasi.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                showAlert('Gagal menyimpan permohonan: ' + error.message);
+            }
+        }
+        
+        // Function to go back
+        function goBack() {
+            window.history.back();
+        }
+        
+        // Function to update application fields based on selected application type
+        function updateApplicationFields() {
+            const applicationType = document.getElementById('applicationType').value;
+            const additionalFields = document.getElementById('additionalFields');
+            
+            // Hide all additional fields
+            document.getElementById('extendPassportFields').classList.add('hidden');
+            document.getElementById('lostPassportFields').classList.add('hidden');
+            document.getElementById('damagedPassportFields').classList.add('hidden');
+            document.getElementById('dataChangeFields').classList.add('hidden');
+            
+            // Show relevant fields based on application type
+            if (applicationType === 'perpanjang-paspor') {
+                additionalFields.classList.remove('hidden');
+                document.getElementById('extendPassportFields').classList.remove('hidden');
+            } else if (applicationType === 'paspor-hilang') {
+                additionalFields.classList.remove('hidden');
+                document.getElementById('lostPassportFields').classList.remove('hidden');
+            } else if (applicationType === 'paspor-rusak') {
+                additionalFields.classList.remove('hidden');
+                document.getElementById('damagedPassportFields').classList.remove('hidden');
+            } else if (applicationType === 'paspor-beda-data') {
+                additionalFields.classList.remove('hidden');
+                document.getElementById('dataChangeFields').classList.remove('hidden');
+            } else {
+                additionalFields.classList.add('hidden');
+            }
+        }
+        
+        // Function to handle file upload
+        function handleFileUpload(fileInputId, previewId) {
+            const fileInput = document.getElementById(fileInputId);
+            const preview = document.getElementById(previewId);
+            
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    preview.innerHTML = `
+                        <div class="bg-white bg-opacity-90 rounded-lg p-4 flex items-center justify-between">
+                            <div class="flex items-center">
+                                <i class="fas fa-file text-blue-600 text-xl mr-3"></i>
+                                <div>
+                                    <div class="text-gray-800 font-medium">${file.name}</div>
+                                    <div class="text-gray-600 text-sm">${(file.size / 1024 / 1024).toFixed(2)} MB</div>
+                                </div>
+                            </div>
+                            <button type="button" class="text-red-500 hover:text-red-700" onclick="removeFile('${fileInputId}', '${previewId}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    `;
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        }
+        
+        // Function to remove uploaded file
+        function removeFile(fileInputId, previewId) {
+            document.getElementById(fileInputId).value = '';
+            document.getElementById(previewId).innerHTML = '';
+        }
+        
+        // Function to initialize schedule grid
+        function initializeScheduleGrid() {
+            const scheduleGrid = document.getElementById('scheduleGrid');
+            const today = new Date();
+            
+            // Clear existing schedule items
+            scheduleGrid.innerHTML = '';
+            
+            // Generate next 7 days
+            for (let i = 1; i <= 7; i++) {
+                const date = new Date(today);
+                date.setDate(today.getDate() + i);
+                
+                const dayNames = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+                
+                const dayName = dayNames[date.getDay()];
+                const dateNum = date.getDate();
+                const monthName = monthNames[date.getMonth()];
+                
+                // Skip weekends
+                if (date.getDay() === 0 || date.getDay() === 6) {
+                    continue;
+                }
+                
+                const scheduleItem = document.createElement('div');
+                scheduleItem.className = 'schedule-item rounded-lg p-4 text-center cursor-pointer transition-colors duration-300';
+                scheduleItem.onclick = function() {
+                    selectSchedule(date.toISOString().split('T')[0]);
+                };
+                
+                // Random available slots
+                const availableSlots = Math.floor(Math.random() * 10) + 1;
+                
+                scheduleItem.innerHTML = `
+                    <div class="text-white font-bold">${dateNum} ${monthName}</div>
+                    <div class="text-blue-200 text-sm">${dayName}</div>
+                    <div class="text-green-300 text-xs mt-2">${availableSlots} slot tersedia</div>
+                `;
+                
+                scheduleGrid.appendChild(scheduleItem);
+            }
+        }
+        
+        // Function to select a schedule date
+        function selectSchedule(date) {
+            // Remove selected class from all schedule items
+            document.querySelectorAll('.schedule-item').forEach(item => {
+                item.classList.remove('bg-blue-500', 'bg-opacity-50');
+            });
+            
+            // Add selected class to clicked item
+            event.currentTarget.classList.add('bg-blue-500', 'bg-opacity-50');
+            
+            // Store selected date
+            document.getElementById('selectedDate').value = date;
+            
+            // Show time slot selection
+            document.getElementById('timeSlotGroup').style.display = 'block';
+            
+            // Initialize time slot grid
+            initializeTimeSlotGrid();
+        }
+        
+        // Function to initialize time slot grid
+        function initializeTimeSlotGrid() {
+            const timeSlotGrid = document.getElementById('timeSlotGrid');
+            
+            // Clear existing time slots
+            timeSlotGrid.innerHTML = '';
+            
+            // Define time slots
+            const timeSlots = [
+                { time: '08:00', display: '08:00 - 09:00' },
+                { time: '09:00', display: '09:00 - 10:00' },
+                { time: '10:00', display: '10:00 - 11:00' },
+                { time: '11:00', display: '11:00 - 12:00' },
+                { time: '13:00', display: '13:00 - 14:00' },
+                { time: '14:00', display: '14:00 - 15:00' },
+                { time: '15:00', display: '15:00 - 16:00' }
+            ];
+            
+            // Add time slot items
+            timeSlots.forEach(slot => {
+                const timeSlotItem = document.createElement('div');
+                timeSlotItem.className = 'time-slot-item rounded-lg p-4 text-center cursor-pointer transition-colors duration-300';
+                timeSlotItem.onclick = function() {
+                    selectTimeSlot(slot.time);
+                };
+                
+                // Random available slots
+                const availableSlots = Math.floor(Math.random() * 10) + 1;
+                
+                timeSlotItem.innerHTML = `
+                    <div class="text-white font-medium">${slot.display}</div>
+                    <div class="text-green-300 text-xs mt-2">${availableSlots} slot tersedia</div>
+                `;
+                
+                timeSlotGrid.appendChild(timeSlotItem);
+            });
+        }
+        
+        // Function to select a time slot
+        function selectTimeSlot(time) {
+            // Remove selected class from all time slot items
+            document.querySelectorAll('.time-slot-item').forEach(item => {
+                item.classList.remove('bg-blue-500', 'bg-opacity-50');
+            });
+            
+            // Add selected class to clicked item
+            event.currentTarget.classList.add('bg-blue-500', 'bg-opacity-50');
+            
+            // Store selected time
+            document.getElementById('selectedTime').value = time;
+        }
+        
+        // Function to show alert
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+        
+        // Initialize the form
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add hidden input for selected date
+            const dateInput = document.createElement('input');
+            dateInput.type = 'hidden';
+            dateInput.id = 'selectedDate';
+            dateInput.name = 'selectedDate';
+            document.getElementById('registrationForm').appendChild(dateInput);
+            
+            // Add hidden input for selected time
+            const timeInput = document.createElement('input');
+            timeInput.type = 'hidden';
+            timeInput.id = 'selectedTime';
+            timeInput.name = 'selectedTime';
+            document.getElementById('registrationForm').appendChild(timeInput);
+        });
+    </script>
+</body>
+</html>

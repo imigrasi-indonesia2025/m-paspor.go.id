@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Admin - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .status-pending { background: #f59e0b; }
+        .status-verified { background: #3b82f6; }
+        .status-processing { background: #8b5cf6; }
+        .status-approved { background: #10b981; }
+        .status-rejected { background: #ef4444; }
+        .status-completed { background: #059669; }
+        .sidebar {
+            transition: transform 0.3s ease;
+        }
+        .sidebar.collapsed {
+            transform: translateX(-100%);
+        }
+        @media (min-width: 768px) {
+            .sidebar.collapsed {
+                transform: translateX(0);
+                width: 80px;
+            }
+        }
+        .popup-animation {
+            animation: popupSlide 0.3s ease-out;
+        }
+        @keyframes popupSlide {
+            from { 
+                opacity: 0; 
+                transform: scale(0.8) translateY(-20px); 
+            }
+            to { 
+                opacity: 1; 
+                transform: scale(1) translateY(0); 
+            }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed left-0 top-0 h-full w-64 glass-effect z-40 sidebar">
+        <div class="p-6">
+            <div class="flex items-center space-x-3 mb-8">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-8 h-8 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-xl text-white hidden"></i>
+                <div class="sidebar-text">
+                    <h1 class="text-lg font-bold text-white">M-Paspor</h1>
+                    <p class="text-xs text-indigo-200">Admin Panel</p>
+                </div>
+            </div>
+            
+            <nav class="space-y-2">
+                <a href="#" onclick="showSection('dashboard')" class="nav-item flex items-center space-x-3 p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors duration-300">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="sidebar-text">Dashboard</span>
+                </a>
+                <a href="#" onclick="showSection('applications')" class="nav-item flex items-center space-x-3 p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors duration-300">
+                    <i class="fas fa-file-alt"></i>
+                    <span class="sidebar-text">Permohonan</span>
+                </a>
+                <a href="#" onclick="showSection('users')" class="nav-item flex items-center space-x-3 p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors duration-300">
+                    <i class="fas fa-users"></i>
+                    <span class="sidebar-text">Pengguna</span>
+                </a>
+                <a href="#" onclick="showSection('payments')" class="nav-item flex items-center space-x-3 p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors duration-300">
+                    <i class="fas fa-credit-card"></i>
+                    <span class="sidebar-text">Pembayaran</span>
+                </a>
+                <a href="#" onclick="showSection('reports')" class="nav-item flex items-center space-x-3 p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors duration-300">
+                    <i class="fas fa-chart-bar"></i>
+                    <span class="sidebar-text">Laporan</span>
+                </a>
+                <a href="#" onclick="showSection('settings')" class="nav-item flex items-center space-x-3 p-3 rounded-lg text-white hover:bg-white hover:bg-opacity-20 transition-colors duration-300">
+                    <i class="fas fa-cog"></i>
+                    <span class="sidebar-text">Pengaturan</span>
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div id="mainContent" class="ml-64 transition-all duration-300">
+        <!-- Header -->
+        <header class="glass-effect p-4 shadow-lg">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <button id="sidebarToggle" class="text-white hover:text-indigo-200 transition-colors duration-300 md:hidden">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
+                    <h2 id="pageTitle" class="text-xl font-bold text-white">Dashboard Admin</h2>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button id="notificationBtn" class="text-white hover:text-indigo-200 transition-colors duration-300">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notificationCount" class="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden">0</span>
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-white">
+                        <i class="fas fa-user-shield text-xl"></i>
+                        <span id="adminName">Admin</span>
+                    </div>
+                    <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard Section -->
+        <div id="dashboardSection" class="p-6">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-file-alt text-4xl text-blue-300 mb-4"></i>
+                    <h3 class="text-2xl font-bold text-white" id="totalApplicationsCount">0</h3>
+                    <p class="text-indigo-200">Total Permohonan</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-clock text-4xl text-yellow-300 mb-4"></i>
+                    <h3 class="text-2xl font-bold text-white" id="pendingApplicationsCount">0</h3>
+                    <p class="text-indigo-200">Menunggu Verifikasi</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-check-circle text-4xl text-green-300 mb-4"></i>
+                    <h3 class="text-2xl font-bold text-white" id="approvedApplicationsCount">0</h3>
+                    <p class="text-indigo-200">Disetujui</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-users text-4xl text-purple-300 mb-4"></i>
+                    <h3 class="text-2xl font-bold text-white" id="totalUsersCount">0</h3>
+                    <p class="text-indigo-200">Total Pengguna</p>
+                </div>
+            </div>
+
+            <!-- Recent Applications -->
+            <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Permohonan Terbaru</h3>
+                    <button onclick="showSection('applications')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        Lihat Semua
+                    </button>
+                </div>
+                <div id="recentApplications" class="space-y-4">
+                    <!-- Recent applications will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="showSection('applications')">
+                    <i class="fas fa-tasks text-3xl text-blue-300 mb-3"></i>
+                    <h4 class="text-lg font-semibold text-white mb-2">Kelola Permohonan</h4>
+                    <p class="text-indigo-200 text-sm">Verifikasi dan proses permohonan</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="showSection('users')">
+                    <i class="fas fa-user-cog text-3xl text-green-300 mb-3"></i>
+                    <h4 class="text-lg font-semibold text-white mb-2">Kelola Pengguna</h4>
+                    <p class="text-indigo-200 text-sm">Manajemen akun pengguna</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="showSection('settings')">
+                    <i class="fas fa-cog text-3xl text-purple-300 mb-3"></i>
+                    <h4 class="text-lg font-semibold text-white mb-2">Pengaturan</h4>
+                    <p class="text-indigo-200 text-sm">Konfigurasi sistem</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Applications Section -->
+        <div id="applicationsSection" class="p-6 hidden">
+            <div class="glass-effect rounded-2xl p-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Kelola Permohonan</h3>
+                    <div class="flex space-x-2">
+                        <select id="statusFilter" class="bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2">
+                            <option value="">Semua Status</option>
+                            <option value="pending">Menunggu Verifikasi</option>
+                            <option value="verified">Terverifikasi</option>
+                            <option value="processing">Sedang Diproses</option>
+                            <option value="approved">Disetujui</option>
+                            <option value="rejected">Ditolak</option>
+                        </select>
+                        <button onclick="loadApplications()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-sync-alt mr-2"></i>Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-white">
+                        <thead>
+                            <tr class="border-b border-white border-opacity-20">
+                                <th class="text-left py-3 px-4">No. Permohonan</th>
+                                <th class="text-left py-3 px-4">Nama Pemohon</th>
+                                <th class="text-left py-3 px-4">Jenis</th>
+                                <th class="text-left py-3 px-4">Tanggal</th>
+                                <th class="text-left py-3 px-4">Status</th>
+                                <th class="text-left py-3 px-4">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="applicationsTable">
+                            <!-- Applications will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Section -->
+        <div id="usersSection" class="p-6 hidden">
+            <div class="glass-effect rounded-2xl p-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Kelola Pengguna</h3>
+                    <button onclick="loadUsers()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-white">
+                        <thead>
+                            <tr class="border-b border-white border-opacity-20">
+                                <th class="text-left py-3 px-4">Nama</th>
+                                <th class="text-left py-3 px-4">Email</th>
+                                <th class="text-left py-3 px-4">Tanggal Daftar</th>
+                                <th class="text-left py-3 px-4">Status</th>
+                                <th class="text-left py-3 px-4">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usersTable">
+                            <!-- Users will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payments Section -->
+        <div id="paymentsSection" class="p-6 hidden">
+            <div class="glass-effect rounded-2xl p-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Kelola Pembayaran</h3>
+                    <button onclick="loadPayments()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-white">
+                        <thead>
+                            <tr class="border-b border-white border-opacity-20">
+                                <th class="text-left py-3 px-4">No. Permohonan</th>
+                                <th class="text-left py-3 px-4">Nama</th>
+                                <th class="text-left py-3 px-4">Jumlah</th>
+                                <th class="text-left py-3 px-4">Metode</th>
+                                <th class="text-left py-3 px-4">Tanggal</th>
+                                <th class="text-left py-3 px-4">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="paymentsTable">
+                            <!-- Payments will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Reports Section -->
+        <div id="reportsSection" class="p-6 hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass-effect rounded-2xl p-6 fade-in">
+                    <h3 class="text-xl font-bold text-white mb-4">Statistik Bulanan</h3>
+                    <div id="monthlyStats" class="space-y-3">
+                        <!-- Monthly stats will be loaded here -->
+                    </div>
+                </div>
+                <div class="glass-effect rounded-2xl p-6 fade-in">
+                    <h3 class="text-xl font-bold text-white mb-4">Status Permohonan</h3>
+                    <div id="statusStats" class="space-y-3">
+                        <!-- Status stats will be loaded here -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="glass-effect rounded-2xl p-6 mt-6 fade-in">
+                <h3 class="text-xl font-bold text-white mb-4">Laporan Pembayaran</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="text-center">
+                        <h4 class="text-3xl font-bold text-green-300" id="totalRevenue">Rp 0</h4>
+                        <p class="text-indigo-200">Total Pendapatan</p>
+                    </div>
+                    <div class="text-center">
+                        <h4 class="text-3xl font-bold text-blue-300" id="totalPayments">0</h4>
+                        <p class="text-indigo-200">Total Pembayaran</p>
+                    </div>
+                    <div class="text-center">
+                        <h4 class="text-3xl font-bold text-yellow-300" id="avgPayment">Rp 0</h4>
+                        <p class="text-indigo-200">Rata-rata Pembayaran</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Section -->
+        <div id="settingsSection" class="p-6 hidden">
+            <div class="glass-effect rounded-2xl p-6 fade-in">
+                <h3 class="text-xl font-bold text-white mb-6">Pengaturan Sistem</h3>
+                
+                <!-- General Settings -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-4">Pengaturan Umum</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-indigo-200 text-sm mb-2">Batas Waktu Verifikasi (hari)</label>
+                                <input type="number" id="verificationTimeout" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" value="3">
+                            </div>
+                            <div>
+                                <label class="block text-indigo-200 text-sm mb-2">Email Notifikasi Admin</label>
+                                <input type="email" id="adminEmail" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" placeholder="admin@mpaspor.go.id">
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h4 class="text-lg font-semibold text-white mb-4">Pengaturan Biaya</h4>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-indigo-200 text-sm mb-2">Biaya Paspor Biasa</label>
+                                <input type="number" id="regularPassportFee" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" value="350000">
+                            </div>
+                            <div>
+                                <label class="block text-indigo-200 text-sm mb-2">Biaya Paspor Tebal</label>
+                                <input type="number" id="thickPassportFee" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" value="655000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Payment Popup Settings -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-semibold text-white mb-4">🔔 Pengaturan Popup Pembayaran</h4>
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-4">
+                                <div class="flex items-center space-x-3">
+                                    <input type="checkbox" id="popupEnabled" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded">
+                                    <label class="text-indigo-200 text-sm">Aktifkan Popup Pembayaran</label>
+                                </div>
+                                <div>
+                                    <label class="block text-indigo-200 text-sm mb-2">Judul Popup</label>
+                                    <input type="text" id="popupTitle" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" value="Pembayaran Diperlukan">
+                                </div>
+                                <div>
+                                    <label class="block text-indigo-200 text-sm mb-2">Icon Popup (Emoji)</label>
+                                    <input type="text" id="popupIcon" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" value="💳" maxlength="2">
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-indigo-200 text-sm mb-2">Pesan Popup</label>
+                                <textarea id="popupMessage" class="w-full bg-white bg-opacity-20 text-white border border-white border-opacity-30 rounded-lg px-3 py-2" rows="6" placeholder="Masukkan pesan popup...">Silakan selesaikan pembayaran untuk melanjutkan proses permohonan Anda.</textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex space-x-3">
+                            <button onclick="savePopupSettings()" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                                <i class="fas fa-save mr-2"></i>Simpan Pengaturan Popup
+                            </button>
+                            <button onclick="testPopup()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                                <i class="fas fa-eye mr-2"></i>Test Popup
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="mt-6">
+                    <button onclick="saveSettings()" class="bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-save mr-2"></i>Simpan Semua Pengaturan
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Detail Modal -->
+    <div id="applicationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Detail Permohonan</h3>
+                <button onclick="closeApplicationModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="applicationModalContent">
+                <!-- Application details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Test Popup -->
+    <div id="testPopupModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center popup-animation">
+            <div id="testPopupIcon" class="text-6xl mb-4">💳</div>
+            <h3 id="testPopupTitle" class="text-xl font-bold text-gray-800 mb-4">Pembayaran Diperlukan</h3>
+            <p id="testPopupMessage" class="text-gray-600 mb-6">Silakan selesaikan pembayaran untuk melanjutkan proses permohonan Anda.</p>
+            <div class="flex space-x-3 justify-center">
+                <button onclick="closeTestPopup()" class="bg-gray-500 hover:bg-gray-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                    Nanti
+                </button>
+                <button onclick="closeTestPopup()" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                    Bayar Sekarang
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentAdmin = null;
+
+        // Check authentication and admin role
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                try {
+                    const userDoc = await db.collection('users').doc(user.uid).get();
+                    if (userDoc.exists && userDoc.data().role === 'admin') {
+                        currentAdmin = user;
+                        document.getElementById('adminName').textContent = userDoc.data().name || 'Admin';
+                        loadDashboardData();
+                        setupRealtimeUpdates();
+                    } else {
+                        showAlert('Akses ditolak. Anda bukan admin.', 'error');
+                        auth.signOut();
+                    }
+                } catch (error) {
+                    console.error('Error checking admin role:', error);
+                    auth.signOut();
+                }
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Load dashboard data
+        async function loadDashboardData() {
+            try {
+                await Promise.all([
+                    loadStats(),
+                    loadRecentApplications(),
+                    loadPopupSettings()
+                ]);
+            } catch (error) {
+                console.error('Error loading dashboard data:', error);
+                showAlert('Gagal memuat data dashboard', 'error');
+            }
+        }
+
+        // Load statistics
+        async function loadStats() {
+            try {
+                const [applicationsSnapshot, usersSnapshot, paymentsSnapshot] = await Promise.all([
+                    db.collection('applications').get(),
+                    db.collection('users').where('role', '!=', 'admin').get(),
+                    db.collection('payments').get()
+                ]);
+
+                const applications = [];
+                applicationsSnapshot.forEach(doc => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+
+                const payments = [];
+                paymentsSnapshot.forEach(doc => {
+                    payments.push({ id: doc.id, ...doc.data() });
+                });
+
+                const totalApplications = applications.length;
+                const pendingApplications = applications.filter(app => app.status === 'pending').length;
+                const approvedApplications = applications.filter(app => app.status === 'approved').length;
+                const totalUsers = usersSnapshot.size;
+
+                document.getElementById('totalApplicationsCount').textContent = totalApplications;
+                document.getElementById('pendingApplicationsCount').textContent = pendingApplications;
+                document.getElementById('approvedApplicationsCount').textContent = approvedApplications;
+                document.getElementById('totalUsersCount').textContent = totalUsers;
+
+                // Update notification count
+                if (pendingApplications > 0) {
+                    document.getElementById('notificationCount').textContent = pendingApplications;
+                    document.getElementById('notificationCount').classList.remove('hidden');
+                }
+
+                // Update payment stats
+                const totalRevenue = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
+                const avgPayment = payments.length > 0 ? totalRevenue / payments.length : 0;
+
+                document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
+                document.getElementById('totalPayments').textContent = payments.length;
+                document.getElementById('avgPayment').textContent = formatCurrency(avgPayment);
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        // Load recent applications
+        async function loadRecentApplications() {
+            try {
+                const snapshot = await db.collection('applications')
+                    .orderBy('createdAt', 'desc')
+                    .limit(5)
+                    .get();
+
+                const applications = [];
+                snapshot.forEach(doc => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+
+                const container = document.getElementById('recentApplications');
+                
+                if (applications.length === 0) {
+                    container.innerHTML = `
+                        <div class="text-center py-8 text-indigo-200">
+                            Belum ada permohonan terbaru
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = applications.map(app => `
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-colors duration-300" onclick="showApplicationDetail('${app.id}')">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-white font-semibold">${app.fullName || 'Nama tidak tersedia'}</h4>
+                                <p class="text-indigo-200 text-sm">No: ${app.applicationNumber || app.id.substring(0, 8).toUpperCase()}</p>
+                                <p class="text-indigo-200 text-sm">${app.applicationType || 'Paspor Baru'}</p>
+                            </div>
+                            <div class="text-right">
+                                <span class="status-${app.status} text-white px-3 py-1 rounded-full text-sm">
+                                    ${getStatusText(app.status)}
+                                </span>
+                                <p class="text-indigo-200 text-xs mt-1">
+                                    ${formatDate(app.createdAt)}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading recent applications:', error);
+            }
+        }
+
+        // Load all applications
+        async function loadApplications() {
+            try {
+                const statusFilter = document.getElementById('statusFilter')?.value || '';
+                let query = db.collection('applications').orderBy('createdAt', 'desc');
+                
+                if (statusFilter) {
+                    query = query.where('status', '==', statusFilter);
+                }
+
+                const snapshot = await query.get();
+                const applications = [];
+                
+                snapshot.forEach(doc => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+
+                const tbody = document.getElementById('applicationsTable');
+                
+                if (applications.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-8 text-indigo-200">
+                                Tidak ada permohonan ditemukan
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = applications.map(app => `
+                    <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
+                        <td class="py-3 px-4">${app.applicationNumber || app.id.substring(0, 8).toUpperCase()}</td>
+                        <td class="py-3 px-4">${app.fullName || 'Nama tidak tersedia'}</td>
+                        <td class="py-3 px-4">${app.applicationType || 'Paspor Baru'}</td>
+                        <td class="py-3 px-4">${formatDate(app.createdAt)}</td>
+                        <td class="py-3 px-4">
+                            <span class="status-${app.status} text-white px-2 py-1 rounded text-xs">
+                                ${getStatusText(app.status)}
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <div class="flex space-x-2">
+                                <button onclick="showApplicationDetail('${app.id}')" class="text-blue-300 hover:text-blue-100 text-sm" title="Detail">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button onclick="updateApplicationStatus('${app.id}', 'verified')" class="text-green-300 hover:text-green-100 text-sm" title="Verifikasi">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                                <button onclick="updateApplicationStatus('${app.id}', 'rejected')" class="text-red-300 hover:text-red-100 text-sm" title="Tolak">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading applications:', error);
+            }
+        }
+
+        // Load users
+        async function loadUsers() {
+            try {
+                const snapshot = await db.collection('users')
+                    .where('role', '!=', 'admin')
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                const users = [];
+                snapshot.forEach(doc => {
+                    users.push({ id: doc.id, ...doc.data() });
+                });
+
+                const tbody = document.getElementById('usersTable');
+                
+                if (users.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center py-8 text-indigo-200">
+                                Tidak ada pengguna ditemukan
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = users.map(user => `
+                    <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
+                        <td class="py-3 px-4">${user.name || 'Nama tidak tersedia'}</td>
+                        <td class="py-3 px-4">${user.email}</td>
+                        <td class="py-3 px-4">${formatDate(user.createdAt)}</td>
+                        <td class="py-3 px-4">
+                            <span class="bg-green-500 text-white px-2 py-1 rounded text-xs">
+                                Aktif
+                            </span>
+                        </td>
+                        <td class="py-3 px-4">
+                            <button onclick="viewUserDetail('${user.id}')" class="text-blue-300 hover:text-blue-100 text-sm">
+                                <i class="fas fa-eye mr-1"></i>Detail
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading users:', error);
+            }
+        }
+
+        // Load payments
+        async function loadPayments() {
+            try {
+                const snapshot = await db.collection('payments')
+                    .orderBy('createdAt', 'desc')
+                    .get();
+
+                const payments = [];
+                const applicationIds = [];
+                
+                snapshot.forEach(doc => {
+                    const payment = { id: doc.id, ...doc.data() };
+                    payments.push(payment);
+                    if (payment.applicationId) {
+                        applicationIds.push(payment.applicationId);
+                    }
+                });
+
+                // Get application details
+                const applicationPromises = applicationIds.map(id => 
+                    db.collection('applications').doc(id).get()
+                );
+                const applicationDocs = await Promise.all(applicationPromises);
+                
+                const applications = {};
+                applicationDocs.forEach(doc => {
+                    if (doc.exists) {
+                        applications[doc.id] = doc.data();
+                    }
+                });
+
+                const tbody = document.getElementById('paymentsTable');
+                
+                if (payments.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center py-8 text-indigo-200">
+                                Tidak ada pembayaran ditemukan
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+
+                tbody.innerHTML = payments.map(payment => {
+                    const app = applications[payment.applicationId] || {};
+                    return `
+                        <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
+                            <td class="py-3 px-4">${app.applicationNumber || payment.applicationId?.substring(0, 8).toUpperCase() || '-'}</td>
+                            <td class="py-3 px-4">${app.fullName || 'Nama tidak tersedia'}</td>
+                            <td class="py-3 px-4">${formatCurrency(payment.amount || 0)}</td>
+                            <td class="py-3 px-4">${getPaymentMethodText(payment.method)}</td>
+                            <td class="py-3 px-4">${formatDate(payment.createdAt)}</td>
+                            <td class="py-3 px-4">
+                                <span class="bg-green-500 text-white px-2 py-1 rounded text-xs">
+                                    ${payment.status === 'completed' ? 'Berhasil' : payment.status}
+                                </span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } catch (error) {
+                console.error('Error loading payments:', error);
+            }
+        }
+
+        // Show application detail
+        async function showApplicationDetail(applicationId) {
+            try {
+                const doc = await db.collection('applications').doc(applicationId).get();
+                if (doc.exists) {
+                    const app = doc.data();
+                    const modalContent = document.getElementById('applicationModalContent');
+                    
+                    modalContent.innerHTML = `
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-800 mb-4">Informasi Pemohon</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Nama Lengkap</label>
+                                        <p class="text-gray-900">${app.fullName || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">NIK</label>
+                                        <p class="text-gray-900">${app.nik || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Email</label>
+                                        <p class="text-gray-900">${app.email || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">No. Telepon</label>
+                                        <p class="text-gray-900">${app.phone || '-'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <h4 class="text-lg font-semibold text-gray-800 mb-4">Detail Permohonan</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">No. Permohonan</label>
+                                        <p class="text-gray-900">${app.applicationNumber || applicationId.substring(0, 8).toUpperCase()}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Jenis Permohonan</label>
+                                        <p class="text-gray-900">${app.applicationType || 'Paspor Baru'}</p>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Status</label>
+                                        <span class="status-${app.status} text-white px-3 py-1 rounded-full text-sm">
+                                            ${getStatusText(app.status)}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Tanggal Pengajuan</label>
+                                        <p class="text-gray-900">${formatDate(app.createdAt)}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">Aksi Admin</h4>
+                            <div class="flex flex-wrap gap-3">
+                                <button onclick="updateApplicationStatus('${applicationId}', 'verified')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                    <i class="fas fa-check mr-2"></i>Verifikasi
+                                </button>
+                                <button onclick="updateApplicationStatus('${applicationId}', 'processing')" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                    <i class="fas fa-cog mr-2"></i>Proses
+                                </button>
+                                <button onclick="updateApplicationStatus('${applicationId}', 'approved')" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                    <i class="fas fa-thumbs-up mr-2"></i>Setujui
+                                </button>
+                                <button onclick="updateApplicationStatus('${applicationId}', 'rejected')" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                    <i class="fas fa-times mr-2"></i>Tolak
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Catatan Admin</label>
+                            <textarea id="adminNotes" class="w-full border border-gray-300 rounded-lg px-3 py-2" rows="3" placeholder="Tambahkan catatan...">${app.adminNotes || ''}</textarea>
+                            <button onclick="saveAdminNotes('${applicationId}')" class="mt-2 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                                <i class="fas fa-save mr-2"></i>Simpan Catatan
+                            </button>
+                        </div>
+                    `;
+                    
+                    document.getElementById('applicationModal').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading application detail:', error);
+                showAlert('Gagal memuat detail permohonan', 'error');
+            }
+        }
+
+        // Update application status
+        async function updateApplicationStatus(applicationId, newStatus) {
+            try {
+                const updateData = {
+                    status: newStatus,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                // Add timestamp for specific status
+                if (newStatus === 'verified') {
+                    updateData.verifiedAt = firebase.firestore.FieldValue.serverTimestamp();
+                } else if (newStatus === 'processing') {
+                    updateData.processingAt = firebase.firestore.FieldValue.serverTimestamp();
+                } else if (newStatus === 'approved') {
+                    updateData.approvedAt = firebase.firestore.FieldValue.serverTimestamp();
+                }
+
+                await db.collection('applications').doc(applicationId).update(updateData);
+
+                // Create notification for user
+                const appDoc = await db.collection('applications').doc(applicationId).get();
+                if (appDoc.exists) {
+                    const appData = appDoc.data();
+                    await db.collection('notifications').add({
+                        userId: appData.userId,
+                        title: 'Status Permohonan Diperbarui',
+                        message: `Status permohonan Anda telah diubah menjadi: ${getStatusText(newStatus)}`,
+                        type: 'status_update',
+                        read: false,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+
+                showAlert(`Status berhasil diubah menjadi: ${getStatusText(newStatus)}`, 'success');
+                loadApplications();
+                loadStats();
+                closeApplicationModal();
+            } catch (error) {
+                console.error('Error updating application status:', error);
+                showAlert('Gagal mengubah status permohonan', 'error');
+            }
+        }
+
+        // Save admin notes
+        async function saveAdminNotes(applicationId) {
+            try {
+                const notes = document.getElementById('adminNotes').value;
+                await db.collection('applications').doc(applicationId).update({
+                    adminNotes: notes,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+
+                showAlert('Catatan berhasil disimpan', 'success');
+            } catch (error) {
+                console.error('Error saving admin notes:', error);
+                showAlert('Gagal menyimpan catatan', 'error');
+            }
+        }
+
+        // Setup realtime updates
+        function setupRealtimeUpdates() {
+            // Listen for new applications
+            db.collection('applications').onSnapshot((snapshot) => {
+                snapshot.docChanges().forEach((change) => {
+                    if (change.type === 'added') {
+                        loadStats();
+                        loadRecentApplications();
+                        if (!document.getElementById('applicationsSection').classList.contains('hidden')) {
+                            loadApplications();
+                        }
+                    }
+                });
+            });
+        }
+
+        // Navigation functions
+        function showSection(sectionName) {
+            // Hide all sections
+            document.querySelectorAll('[id$="Section"]').forEach(section => {
+                section.classList.add('hidden');
+            });
+
+            // Show selected section
+            document.getElementById(sectionName + 'Section').classList.remove('hidden');
+
+            // Update page title
+            const titles = {
+                dashboard: 'Dashboard Admin',
+                applications: 'Kelola Permohonan',
+                users: 'Kelola Pengguna',
+                payments: 'Kelola Pembayaran',
+                reports: 'Laporan',
+                settings: 'Pengaturan'
+            };
+            document.getElementById('pageTitle').textContent = titles[sectionName];
+
+            // Update active nav item
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('bg-white', 'bg-opacity-20');
+            });
+            event.target.closest('.nav-item').classList.add('bg-white', 'bg-opacity-20');
+
+            // Load section-specific data
+            if (sectionName === 'applications') {
+                loadApplications();
+            } else if (sectionName === 'users') {
+                loadUsers();
+            } else if (sectionName === 'payments') {
+                loadPayments();
+            } else if (sectionName === 'reports') {
+                loadReports();
+            }
+        }
+
+        // Load reports
+        async function loadReports() {
+            try {
+                const snapshot = await db.collection('applications').get();
+                const applications = [];
+                
+                snapshot.forEach(doc => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+
+                // Monthly stats
+                const monthlyStats = {};
+                applications.forEach(app => {
+                    if (app.createdAt) {
+                        const date = app.createdAt.toDate();
+                        const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                        monthlyStats[monthKey] = (monthlyStats[monthKey] || 0) + 1;
+                    }
+                });
+
+                const monthlyStatsContainer = document.getElementById('monthlyStats');
+                monthlyStatsContainer.innerHTML = Object.entries(monthlyStats)
+                    .sort(([a], [b]) => b.localeCompare(a))
+                    .slice(0, 6)
+                    .map(([month, count]) => `
+                        <div class="flex justify-between items-center">
+                            <span class="text-indigo-200">${month}</span>
+                            <span class="text-white font-semibold">${count} permohonan</span>
+                        </div>
+                    `).join('');
+
+                // Status stats
+                const statusStats = {};
+                applications.forEach(app => {
+                    statusStats[app.status] = (statusStats[app.status] || 0) + 1;
+                });
+
+                const statusStatsContainer = document.getElementById('statusStats');
+                statusStatsContainer.innerHTML = Object.entries(statusStats)
+                    .map(([status, count]) => `
+                        <div class="flex justify-between items-center">
+                            <span class="text-indigo-200">${getStatusText(status)}</span>
+                            <span class="text-white font-semibold">${count}</span>
+                        </div>
+                    `).join('');
+            } catch (error) {
+                console.error('Error loading reports:', error);
+            }
+        }
+
+        // Save settings
+        async function saveSettings() {
+            try {
+                const settings = {
+                    verificationTimeout: document.getElementById('verificationTimeout').value,
+                    adminEmail: document.getElementById('adminEmail').value,
+                    regularPassportFee: document.getElementById('regularPassportFee').value,
+                    thickPassportFee: document.getElementById('thickPassportFee').value,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('settings').doc('general').set(settings, { merge: true });
+                showAlert('Pengaturan berhasil disimpan', 'success');
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                showAlert('Gagal menyimpan pengaturan', 'error');
+            }
+        }
+
+        // Save popup settings
+        async function savePopupSettings() {
+            try {
+                const popupSettings = {
+                    enabled: document.getElementById('popupEnabled').checked,
+                    title: document.getElementById('popupTitle').value,
+                    message: document.getElementById('popupMessage').value,
+                    icon: document.getElementById('popupIcon').value,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('settings').doc('paymentPopup').set(popupSettings, { merge: true });
+                showAlert('Pengaturan popup berhasil disimpan', 'success');
+            } catch (error) {
+                console.error('Error saving popup settings:', error);
+                showAlert('Gagal menyimpan pengaturan popup', 'error');
+            }
+        }
+
+        // Test popup
+        function testPopup() {
+            const title = document.getElementById('popupTitle').value;
+            const message = document.getElementById('popupMessage').value;
+            const icon = document.getElementById('popupIcon').value;
+            
+            document.getElementById('testPopupIcon').textContent = icon;
+            document.getElementById('testPopupTitle').textContent = title;
+            document.getElementById('testPopupMessage').textContent = message;
+            document.getElementById('testPopupModal').classList.remove('hidden');
+        }
+
+        // Close test popup
+        function closeTestPopup() {
+            document.getElementById('testPopupModal').classList.add('hidden');
+        }
+
+        // Load popup settings
+        async function loadPopupSettings() {
+            try {
+                const doc = await db.collection('settings').doc('paymentPopup').get();
+                if (doc.exists) {
+                    const settings = doc.data();
+                    document.getElementById('popupEnabled').checked = settings.enabled || false;
+                    document.getElementById('popupTitle').value = settings.title || 'Pembayaran Diperlukan';
+                    document.getElementById('popupMessage').value = settings.message || 'Silakan selesaikan pembayaran untuk melanjutkan proses permohonan Anda.';
+                    document.getElementById('popupIcon').value = settings.icon || '💳';
+                }
+            } catch (error) {
+                console.error('Error loading popup settings:', error);
+            }
+        }
+
+        // Utility functions
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Menunggu Verifikasi',
+                'verified': 'Terverifikasi',
+                'processing': 'Sedang Diproses',
+                'approved': 'Disetujui',
+                'completed': 'Selesai',
+                'rejected': 'Ditolak'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getPaymentMethodText(method) {
+            const methodMap = {
+                'bank': 'Transfer Bank',
+                'ewallet': 'E-Wallet',
+                'qris': 'QRIS'
+            };
+            return methodMap[method] || method;
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        }
+
+        function closeApplicationModal() {
+            document.getElementById('applicationModal').classList.add('hidden');
+        }
+
+        function viewUserDetail(userId) {
+            showAlert('Fitur detail pengguna akan segera tersedia', 'info');
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                'bg-blue-500'
+            } text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = 'index.html';
+            });
+        });
+
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            
+            sidebar.classList.toggle('collapsed');
+            if (sidebar.classList.contains('collapsed')) {
+                mainContent.classList.remove('ml-64');
+                mainContent.classList.add('ml-0');
+            } else {
+                mainContent.classList.remove('ml-0');
+                mainContent.classList.add('ml-64');
+            }
+        });
+
+        document.getElementById('statusFilter')?.addEventListener('change', loadApplications);
+
+        // Close modal when clicking outside
+        document.getElementById('applicationModal').addEventListener('click', (e) => {
+            if (e.target.id === 'applicationModal') {
+                closeApplicationModal();
+            }
+        });
+
+        document.getElementById('testPopupModal').addEventListener('click', (e) => {
+            if (e.target.id === 'testPopupModal') {
+                closeTestPopup();
+            }
+        });
+
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            // Set default active nav item
+            document.querySelector('.nav-item').classList.add('bg-white', 'bg-opacity-20');
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977a2669c5235ce4',t:'MTc1NjYxODM3NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

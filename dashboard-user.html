@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard User - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .status-pending { background: linear-gradient(45deg, #f59e0b, #f97316); }
+        .status-verified { background: linear-gradient(45deg, #3b82f6, #1d4ed8); }
+        .status-approved { background: linear-gradient(45deg, #10b981, #059669); }
+        .status-rejected { background: linear-gradient(45deg, #ef4444, #dc2626); }
+        .notification-dot {
+            width: 8px;
+            height: 8px;
+            background: #ef4444;
+            border-radius: 50%;
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-effect p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-2xl text-white hidden"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white">M-Paspor</h1>
+                    <p class="text-sm text-indigo-100">Dashboard User</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button id="notificationBtn" class="text-white hover:text-indigo-200 transition-colors duration-300">
+                        <i class="fas fa-bell text-xl"></i>
+                        <span id="notificationDot" class="notification-dot hidden"></span>
+                    </button>
+                </div>
+                <div class="flex items-center space-x-2 text-white">
+                    <i class="fas fa-user-circle text-2xl"></i>
+                    <span id="userName" class="font-medium">Loading...</span>
+                </div>
+                <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Notification Panel -->
+    <div id="notificationPanel" class="fixed top-16 right-4 w-80 bg-white rounded-lg shadow-xl z-50 hidden">
+        <div class="p-4 border-b">
+            <h3 class="font-semibold text-gray-800">Notifikasi</h3>
+        </div>
+        <div id="notificationList" class="max-h-64 overflow-y-auto">
+            <!-- Notifications will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 mt-6">
+        <!-- Welcome Section -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-2">Selamat Datang!</h2>
+                    <p class="text-indigo-200">Kelola permohonan paspor Anda dengan mudah</p>
+                </div>
+                <div class="text-right">
+                    <p class="text-indigo-200 text-sm">Status Akun</p>
+                    <span class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">Aktif</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="window.location.href='form.html'">
+                <i class="fas fa-user-plus text-4xl text-blue-300 mb-4"></i>
+                <h3 class="text-lg font-bold text-white mb-2">Daftar</h3>
+                <p class="text-indigo-200 text-sm">Buat akun baru untuk layanan paspor</p>
+            </div>
+            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="window.location.href='form.html'">
+                <i class="fas fa-plus-circle text-4xl text-green-300 mb-4"></i>
+                <h3 class="text-lg font-bold text-white mb-2">Permohonan Baru</h3>
+                <p class="text-indigo-200 text-sm">Ajukan permohonan paspor baru</p>
+            </div>
+            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="checkStatus()">
+                <i class="fas fa-search text-4xl text-yellow-300 mb-4"></i>
+                <h3 class="text-lg font-bold text-white mb-2">Cek Status</h3>
+                <p class="text-indigo-200 text-sm">Pantau status permohonan Anda</p>
+            </div>
+            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="window.location.href='informasi.html'">
+                <i class="fas fa-info-circle text-4xl text-purple-300 mb-4"></i>
+                <h3 class="text-lg font-bold text-white mb-2">Informasi</h3>
+                <p class="text-indigo-200 text-sm">Panduan dan FAQ lengkap</p>
+            </div>
+        </div>
+
+        <!-- Status Permohonan -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-white">Status Permohonan Terkini</h3>
+                <button onclick="refreshStatus()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-sync-alt mr-2"></i>Refresh
+                </button>
+            </div>
+            <div id="currentApplications" class="space-y-4">
+                <!-- Current applications will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Riwayat Permohonan -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <h3 class="text-xl font-bold text-white mb-6">Riwayat Permohonan</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-white">
+                    <thead>
+                        <tr class="border-b border-white border-opacity-20">
+                            <th class="text-left py-3 px-4">No. Permohonan</th>
+                            <th class="text-left py-3 px-4">Jenis</th>
+                            <th class="text-left py-3 px-4">Tanggal</th>
+                            <th class="text-left py-3 px-4">Status</th>
+                            <th class="text-left py-3 px-4">Aksi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTable">
+                        <!-- History will be loaded here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="glass-effect rounded-2xl p-6 text-center fade-in">
+                <i class="fas fa-file-alt text-3xl text-blue-300 mb-3"></i>
+                <h4 class="text-2xl font-bold text-white" id="totalApplications">0</h4>
+                <p class="text-indigo-200">Total Permohonan</p>
+            </div>
+            <div class="glass-effect rounded-2xl p-6 text-center fade-in">
+                <i class="fas fa-clock text-3xl text-yellow-300 mb-3"></i>
+                <h4 class="text-2xl font-bold text-white" id="pendingApplications">0</h4>
+                <p class="text-indigo-200">Sedang Diproses</p>
+            </div>
+            <div class="glass-effect rounded-2xl p-6 text-center fade-in">
+                <i class="fas fa-check-circle text-3xl text-green-300 mb-3"></i>
+                <h4 class="text-2xl font-bold text-white" id="completedApplications">0</h4>
+                <p class="text-indigo-200">Selesai</p>
+            </div>
+        </div>
+    </main>
+
+    <!-- Status Detail Modal -->
+    <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-96 overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Detail Status Permohonan</h3>
+                <button onclick="closeStatusModal()" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="statusModalContent">
+                <!-- Status details will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loadUserData();
+                loadApplications();
+                loadNotifications();
+                setupRealtimeUpdates();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Load user data
+        async function loadUserData() {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || currentUser.email;
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+
+        // Load applications
+        async function loadApplications() {
+            try {
+                const applicationsRef = db.collection('applications')
+                    .where('userId', '==', currentUser.uid)
+                    .orderBy('createdAt', 'desc');
+                
+                const snapshot = await applicationsRef.get();
+                const applications = [];
+                
+                snapshot.forEach(doc => {
+                    applications.push({ id: doc.id, ...doc.data() });
+                });
+
+                displayCurrentApplications(applications);
+                displayApplicationHistory(applications);
+                updateStats(applications);
+            } catch (error) {
+                console.error('Error loading applications:', error);
+                showAlert('Gagal memuat data permohonan', 'error');
+            }
+        }
+
+        // Display current applications
+        function displayCurrentApplications(applications) {
+            const container = document.getElementById('currentApplications');
+            const currentApps = applications.filter(app => 
+                ['pending', 'verified', 'processing'].includes(app.status)
+            );
+
+            if (currentApps.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8">
+                        <i class="fas fa-inbox text-4xl text-indigo-300 mb-4"></i>
+                        <p class="text-indigo-200">Belum ada permohonan aktif</p>
+                        <button onclick="window.location.href='form.html'" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                            Buat Permohonan Baru
+                        </button>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = currentApps.map(app => `
+                <div class="bg-white bg-opacity-10 rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-colors duration-300" onclick="showStatusDetail('${app.id}')">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h4 class="text-white font-semibold">${app.applicationType || 'Paspor Baru'}</h4>
+                            <p class="text-indigo-200 text-sm">No: ${app.applicationNumber || app.id.substring(0, 8).toUpperCase()}</p>
+                            <p class="text-indigo-200 text-sm">Tanggal: ${formatDate(app.createdAt)}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="status-${app.status} text-white px-3 py-1 rounded-full text-sm font-medium">
+                                ${getStatusText(app.status)}
+                            </span>
+                            <p class="text-indigo-200 text-xs mt-1">
+                                ${getStatusDescription(app.status)}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Display application history
+        function displayApplicationHistory(applications) {
+            const tbody = document.getElementById('historyTable');
+            
+            if (applications.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-8 text-indigo-200">
+                            Belum ada riwayat permohonan
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = applications.slice(0, 10).map(app => `
+                <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
+                    <td class="py-3 px-4">${app.applicationNumber || app.id.substring(0, 8).toUpperCase()}</td>
+                    <td class="py-3 px-4">${app.applicationType || 'Paspor Baru'}</td>
+                    <td class="py-3 px-4">${formatDate(app.createdAt)}</td>
+                    <td class="py-3 px-4">
+                        <span class="status-${app.status} text-white px-2 py-1 rounded text-xs">
+                            ${getStatusText(app.status)}
+                        </span>
+                    </td>
+                    <td class="py-3 px-4">
+                        <button onclick="showStatusDetail('${app.id}')" class="text-blue-300 hover:text-blue-100 text-sm">
+                            <i class="fas fa-eye mr-1"></i>Detail
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // Update statistics
+        function updateStats(applications) {
+            const total = applications.length;
+            const pending = applications.filter(app => 
+                ['pending', 'verified', 'processing'].includes(app.status)
+            ).length;
+            const completed = applications.filter(app => 
+                ['approved', 'completed'].includes(app.status)
+            ).length;
+
+            document.getElementById('totalApplications').textContent = total;
+            document.getElementById('pendingApplications').textContent = pending;
+            document.getElementById('completedApplications').textContent = completed;
+        }
+
+        // Load notifications
+        async function loadNotifications() {
+            try {
+                const notificationsRef = db.collection('notifications')
+                    .where('userId', '==', currentUser.uid)
+                    .where('read', '==', false)
+                    .orderBy('createdAt', 'desc')
+                    .limit(10);
+                
+                const snapshot = await notificationsRef.get();
+                const notifications = [];
+                
+                snapshot.forEach(doc => {
+                    notifications.push({ id: doc.id, ...doc.data() });
+                });
+
+                displayNotifications(notifications);
+                
+                if (notifications.length > 0) {
+                    document.getElementById('notificationDot').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading notifications:', error);
+            }
+        }
+
+        // Display notifications
+        function displayNotifications(notifications) {
+            const container = document.getElementById('notificationList');
+            
+            if (notifications.length === 0) {
+                container.innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        Tidak ada notifikasi baru
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = notifications.map(notif => `
+                <div class="p-4 border-b hover:bg-gray-50 cursor-pointer" onclick="markAsRead('${notif.id}')">
+                    <h5 class="font-medium text-gray-800">${notif.title}</h5>
+                    <p class="text-gray-600 text-sm">${notif.message}</p>
+                    <p class="text-gray-400 text-xs mt-1">${formatDate(notif.createdAt)}</p>
+                </div>
+            `).join('');
+        }
+
+        // Setup realtime updates
+        function setupRealtimeUpdates() {
+            // Listen for application updates
+            db.collection('applications')
+                .where('userId', '==', currentUser.uid)
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'modified') {
+                            showAlert('Status permohonan Anda telah diperbarui', 'info');
+                            loadApplications();
+                        }
+                    });
+                });
+
+            // Listen for new notifications
+            db.collection('notifications')
+                .where('userId', '==', currentUser.uid)
+                .where('read', '==', false)
+                .onSnapshot((snapshot) => {
+                    snapshot.docChanges().forEach((change) => {
+                        if (change.type === 'added') {
+                            loadNotifications();
+                        }
+                    });
+                });
+        }
+
+        // Show status detail
+        async function showStatusDetail(applicationId) {
+            try {
+                const doc = await db.collection('applications').doc(applicationId).get();
+                if (doc.exists) {
+                    const app = doc.data();
+                    const modalContent = document.getElementById('statusModalContent');
+                    
+                    modalContent.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">No. Permohonan</label>
+                                    <p class="text-gray-900">${app.applicationNumber || applicationId.substring(0, 8).toUpperCase()}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Jenis Permohonan</label>
+                                    <p class="text-gray-900">${app.applicationType || 'Paspor Baru'}</p>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Status</label>
+                                    <span class="status-${app.status} text-white px-3 py-1 rounded-full text-sm">
+                                        ${getStatusText(app.status)}
+                                    </span>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Tanggal Pengajuan</label>
+                                    <p class="text-gray-900">${formatDate(app.createdAt)}</p>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Timeline Proses</label>
+                                <div class="space-y-2">
+                                    ${generateTimeline(app)}
+                                </div>
+                            </div>
+                            
+                            ${app.adminNotes ? `
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Catatan Admin</label>
+                                    <p class="text-gray-900 bg-gray-50 p-3 rounded">${app.adminNotes}</p>
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+                    
+                    document.getElementById('statusModal').classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading application detail:', error);
+                showAlert('Gagal memuat detail permohonan', 'error');
+            }
+        }
+
+        // Generate timeline
+        function generateTimeline(app) {
+            const steps = [
+                { key: 'submitted', label: 'Permohonan Diajukan', date: app.createdAt },
+                { key: 'verified', label: 'Dokumen Diverifikasi', date: app.verifiedAt },
+                { key: 'processing', label: 'Sedang Diproses', date: app.processingAt },
+                { key: 'approved', label: 'Disetujui', date: app.approvedAt },
+                { key: 'completed', label: 'Selesai', date: app.completedAt }
+            ];
+
+            return steps.map(step => {
+                const isCompleted = step.date;
+                const isCurrent = app.status === step.key;
+                
+                return `
+                    <div class="flex items-center space-x-3">
+                        <div class="w-4 h-4 rounded-full ${isCompleted ? 'bg-green-500' : isCurrent ? 'bg-blue-500' : 'bg-gray-300'}"></div>
+                        <div class="flex-1">
+                            <p class="font-medium ${isCompleted || isCurrent ? 'text-gray-900' : 'text-gray-500'}">${step.label}</p>
+                            ${step.date ? `<p class="text-sm text-gray-500">${formatDate(step.date)}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Utility functions
+        function getStatusText(status) {
+            const statusMap = {
+                'pending': 'Menunggu Verifikasi',
+                'verified': 'Terverifikasi',
+                'processing': 'Sedang Diproses',
+                'approved': 'Disetujui',
+                'completed': 'Selesai',
+                'rejected': 'Ditolak'
+            };
+            return statusMap[status] || status;
+        }
+
+        function getStatusDescription(status) {
+            const descMap = {
+                'pending': 'Dokumen sedang diperiksa admin',
+                'verified': 'Dokumen telah diverifikasi',
+                'processing': 'Paspor sedang dalam proses pembuatan',
+                'approved': 'Paspor siap diambil',
+                'completed': 'Paspor telah selesai',
+                'rejected': 'Permohonan ditolak'
+            };
+            return descMap[status] || '';
+        }
+
+        function formatDate(timestamp) {
+            if (!timestamp) return '-';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('id-ID', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function checkStatus() {
+            loadApplications();
+            showAlert('Status permohonan telah diperbarui', 'success');
+        }
+
+        function refreshStatus() {
+            loadApplications();
+            loadNotifications();
+            showAlert('Data telah diperbarui', 'success');
+        }
+
+        function closeStatusModal() {
+            document.getElementById('statusModal').classList.add('hidden');
+        }
+
+        async function markAsRead(notificationId) {
+            try {
+                await db.collection('notifications').doc(notificationId).update({
+                    read: true,
+                    readAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                loadNotifications();
+            } catch (error) {
+                console.error('Error marking notification as read:', error);
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 
+                type === 'error' ? 'bg-red-500' : 
+                'bg-blue-500'
+            } text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Event listeners
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = 'index.html';
+            });
+        });
+
+        document.getElementById('notificationBtn').addEventListener('click', () => {
+            const panel = document.getElementById('notificationPanel');
+            panel.classList.toggle('hidden');
+        });
+
+        // Close notification panel when clicking outside
+        document.addEventListener('click', (e) => {
+            const panel = document.getElementById('notificationPanel');
+            const btn = document.getElementById('notificationBtn');
+            
+            if (!panel.contains(e.target) && !btn.contains(e.target)) {
+                panel.classList.add('hidden');
+            }
+        });
+
+        // Close modal when clicking outside
+        document.getElementById('statusModal').addEventListener('click', (e) => {
+            if (e.target.id === 'statusModal') {
+                closeStatusModal();
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9779f14b9001fde8',t:'MTc1NjYxNjE5OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profil - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .profile-photo {
+            width: 150px;
+            height: 150px;
+            object-fit: cover;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+        }
+        .photo-upload-area {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+        .photo-upload-area:hover {
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.05);
+        }
+        .modal {
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-effect p-4 shadow-lg">
+        <div class="max-w-4xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-2xl text-white hidden"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white">M-Paspor</h1>
+                    <p class="text-sm text-indigo-100">Profil Pengguna</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <a href="dashboard-user.html" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-arrow-left mr-2"></i>Dashboard
+                </a>
+                <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-sign-out-alt mr-2"></i>Keluar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-4xl mx-auto p-4 mt-6">
+        <!-- Profile Header -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <div class="flex flex-col md:flex-row items-center space-y-4 md:space-y-0 md:space-x-6">
+                <!-- Profile Photo -->
+                <div class="relative">
+                    <img id="profilePhoto" src="" alt="Profile Photo" class="profile-photo rounded-full" style="display: none;">
+                    <div id="photoPlaceholder" class="profile-photo rounded-full bg-white bg-opacity-20 flex items-center justify-center">
+                        <i class="fas fa-user text-4xl text-white opacity-60"></i>
+                    </div>
+                    <button id="changePhotoBtn" class="absolute bottom-0 right-0 bg-blue-500 hover:bg-blue-600 text-white p-2 rounded-full shadow-lg transition-colors duration-300">
+                        <i class="fas fa-camera text-sm"></i>
+                    </button>
+                </div>
+                
+                <!-- Profile Info -->
+                <div class="text-center md:text-left">
+                    <h2 class="text-2xl font-bold text-white mb-2" id="profileName">Loading...</h2>
+                    <p class="text-indigo-200 mb-1" id="profileEmail">Loading...</p>
+                    <p class="text-indigo-300 text-sm" id="profileRole">Loading...</p>
+                    <div class="mt-3">
+                        <span class="bg-green-500 text-white px-3 py-1 rounded-full text-xs">
+                            <i class="fas fa-check-circle mr-1"></i>Akun Terverifikasi
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Tabs -->
+        <div class="glass-effect rounded-2xl p-6 fade-in">
+            <!-- Tab Navigation -->
+            <div class="flex space-x-1 mb-6 bg-white bg-opacity-10 rounded-lg p-1">
+                <button class="tab-btn flex-1 py-2 px-4 rounded-md text-white font-medium transition-all duration-300 active" data-tab="personal">
+                    <i class="fas fa-user mr-2"></i>Data Pribadi
+                </button>
+                <button class="tab-btn flex-1 py-2 px-4 rounded-md text-white font-medium transition-all duration-300" data-tab="security">
+                    <i class="fas fa-lock mr-2"></i>Keamanan
+                </button>
+                <button class="tab-btn flex-1 py-2 px-4 rounded-md text-white font-medium transition-all duration-300" data-tab="settings">
+                    <i class="fas fa-cog mr-2"></i>Pengaturan
+                </button>
+            </div>
+
+            <!-- Personal Data Tab -->
+            <div id="personalTab" class="tab-content">
+                <form id="personalDataForm" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-white font-medium mb-2">Nama Lengkap</label>
+                            <input type="text" id="fullName" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Masukkan nama lengkap">
+                        </div>
+                        <div>
+                            <label class="block text-white font-medium mb-2">Email</label>
+                            <input type="email" id="email" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="email@example.com" readonly>
+                        </div>
+                        <div>
+                            <label class="block text-white font-medium mb-2">Nomor Telepon</label>
+                            <input type="tel" id="phone" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="08xxxxxxxxxx">
+                        </div>
+                        <div>
+                            <label class="block text-white font-medium mb-2">Tanggal Lahir</label>
+                            <input type="date" id="birthDate" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-white font-medium mb-2">Tempat Lahir</label>
+                            <input type="text" id="birthPlace" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Kota kelahiran">
+                        </div>
+                        <div>
+                            <label class="block text-white font-medium mb-2">NIK</label>
+                            <input type="text" id="nik" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="16 digit NIK">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-white font-medium mb-2">Alamat Lengkap</label>
+                        <textarea id="address" rows="3" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Alamat lengkap sesuai KTP"></textarea>
+                    </div>
+                    <div class="flex justify-end">
+                        <button type="submit" class="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-save mr-2"></i>Simpan Perubahan
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Security Tab -->
+            <div id="securityTab" class="tab-content hidden">
+                <div class="space-y-6">
+                    <!-- Change Password -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <h4 class="text-white font-semibold mb-4">Ubah Password</h4>
+                        <form id="changePasswordForm" class="space-y-4">
+                            <div>
+                                <label class="block text-white font-medium mb-2">Password Lama</label>
+                                <input type="password" id="currentPassword" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Masukkan password lama">
+                            </div>
+                            <div>
+                                <label class="block text-white font-medium mb-2">Password Baru</label>
+                                <input type="password" id="newPassword" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Masukkan password baru">
+                            </div>
+                            <div>
+                                <label class="block text-white font-medium mb-2">Konfirmasi Password Baru</label>
+                                <input type="password" id="confirmPassword" class="w-full px-4 py-3 bg-white bg-opacity-20 border border-white border-opacity-30 rounded-lg text-white placeholder-indigo-200 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Konfirmasi password baru">
+                            </div>
+                            <div class="flex justify-end">
+                                <button type="submit" class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-3 rounded-lg transition-colors duration-300">
+                                    <i class="fas fa-key mr-2"></i>Ubah Password
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Security Info -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <h4 class="text-white font-semibold mb-4">Informasi Keamanan</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-indigo-200">Login Terakhir</span>
+                                <span class="text-white" id="lastLogin">Loading...</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-indigo-200">Akun Dibuat</span>
+                                <span class="text-white" id="accountCreated">Loading...</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-indigo-200">Status Verifikasi Email</span>
+                                <span class="text-green-300">
+                                    <i class="fas fa-check-circle mr-1"></i>Terverifikasi
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Tab -->
+            <div id="settingsTab" class="tab-content hidden">
+                <div class="space-y-6">
+                    <!-- Notification Settings -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <h4 class="text-white font-semibold mb-4">Pengaturan Notifikasi</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">Email Notifikasi</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="emailNotif" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">Notifikasi Status Permohonan</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="statusNotif" class="sr-only peer" checked>
+                                    <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Settings -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-4">
+                        <h4 class="text-white font-semibold mb-4">Pengaturan Privasi</h4>
+                        <div class="space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white">Profil Publik</span>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="publicProfile" class="sr-only peer">
+                                    <div class="w-11 h-6 bg-gray-600 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Danger Zone -->
+                    <div class="bg-red-500 bg-opacity-20 border border-red-500 border-opacity-30 rounded-lg p-4">
+                        <h4 class="text-red-300 font-semibold mb-4">Zona Berbahaya</h4>
+                        <p class="text-red-200 text-sm mb-4">Tindakan berikut tidak dapat dibatalkan. Harap berhati-hati.</p>
+                        <button id="deleteAccountBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-trash mr-2"></i>Hapus Akun
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Photo Upload Modal -->
+    <div id="photoModal" class="fixed inset-0 bg-black bg-opacity-50 modal hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Ubah Foto Profil</h3>
+                <button id="closePhotoModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <!-- Upload Area -->
+                <div class="photo-upload-area rounded-lg p-8 text-center cursor-pointer" id="uploadArea">
+                    <i class="fas fa-cloud-upload-alt text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-600 mb-2">Klik untuk memilih foto atau drag & drop</p>
+                    <p class="text-gray-400 text-sm">JPG, PNG maksimal 5MB</p>
+                    <input type="file" id="photoInput" accept="image/*" class="hidden">
+                </div>
+
+                <!-- Preview -->
+                <div id="photoPreview" class="hidden">
+                    <img id="previewImage" src="" alt="Preview" class="w-full h-48 object-cover rounded-lg">
+                </div>
+
+                <!-- Buttons -->
+                <div class="flex space-x-3 pt-4">
+                    <button id="cancelPhoto" class="flex-1 bg-gray-500 hover:bg-gray-600 text-white py-3 rounded-lg transition-colors duration-300">
+                        Batal
+                    </button>
+                    <button id="uploadPhoto" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg transition-colors duration-300" disabled>
+                        <i class="fas fa-upload mr-2"></i>Upload
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        let currentUser = null;
+        let selectedFile = null;
+
+        // Check authentication and load user data
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                currentUser = user;
+                await loadUserProfile();
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+
+        // Load user profile
+        async function loadUserProfile() {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    
+                    // Update profile header
+                    document.getElementById('profileName').textContent = userData.name || 'Nama Belum Diatur';
+                    document.getElementById('profileEmail').textContent = userData.email || currentUser.email;
+                    document.getElementById('profileRole').textContent = userData.role === 'admin' ? 'Administrator' : 'Pengguna';
+                    
+                    // Load profile photo
+                    if (userData.photoURL) {
+                        document.getElementById('profilePhoto').src = userData.photoURL;
+                        document.getElementById('profilePhoto').style.display = 'block';
+                        document.getElementById('photoPlaceholder').style.display = 'none';
+                    }
+                    
+                    // Fill form data
+                    document.getElementById('fullName').value = userData.name || '';
+                    document.getElementById('email').value = userData.email || currentUser.email;
+                    document.getElementById('phone').value = userData.phone || '';
+                    document.getElementById('birthDate').value = userData.birthDate || '';
+                    document.getElementById('birthPlace').value = userData.birthPlace || '';
+                    document.getElementById('nik').value = userData.nik || '';
+                    document.getElementById('address').value = userData.address || '';
+                    
+                    // Security info
+                    document.getElementById('lastLogin').textContent = formatDate(userData.lastLogin);
+                    document.getElementById('accountCreated').textContent = formatDate(userData.createdAt);
+                }
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                showAlert('Gagal memuat profil');
+            }
+        }
+
+        // Tab functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                
+                // Update active tab button
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('active', 'bg-white', 'bg-opacity-20');
+                });
+                btn.classList.add('active', 'bg-white', 'bg-opacity-20');
+                
+                // Show/hide tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            });
+        });
+
+        // Personal data form submission
+        document.getElementById('personalDataForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                name: document.getElementById('fullName').value,
+                phone: document.getElementById('phone').value,
+                birthDate: document.getElementById('birthDate').value,
+                birthPlace: document.getElementById('birthPlace').value,
+                nik: document.getElementById('nik').value,
+                address: document.getElementById('address').value,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            try {
+                await db.collection('users').doc(currentUser.uid).update(formData);
+                showAlert('Profil berhasil diperbarui!', 'success');
+                
+                // Update display name
+                document.getElementById('profileName').textContent = formData.name;
+                
+            } catch (error) {
+                console.error('Error updating profile:', error);
+                showAlert('Gagal memperbarui profil');
+            }
+        });
+
+        // Change password form submission
+        document.getElementById('changePasswordForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (newPassword !== confirmPassword) {
+                showAlert('Password baru tidak cocok');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showAlert('Password minimal 6 karakter');
+                return;
+            }
+            
+            try {
+                // Re-authenticate user
+                const credential = firebase.auth.EmailAuthProvider.credential(
+                    currentUser.email,
+                    currentPassword
+                );
+                
+                await currentUser.reauthenticateWithCredential(credential);
+                await currentUser.updatePassword(newPassword);
+                
+                showAlert('Password berhasil diubah!', 'success');
+                
+                // Clear form
+                document.getElementById('changePasswordForm').reset();
+                
+            } catch (error) {
+                console.error('Error changing password:', error);
+                if (error.code === 'auth/wrong-password') {
+                    showAlert('Password lama salah');
+                } else {
+                    showAlert('Gagal mengubah password');
+                }
+            }
+        });
+
+        // Photo upload functionality
+        document.getElementById('changePhotoBtn').addEventListener('click', () => {
+            document.getElementById('photoModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closePhotoModal').addEventListener('click', closePhotoModal);
+        document.getElementById('cancelPhoto').addEventListener('click', closePhotoModal);
+
+        document.getElementById('uploadArea').addEventListener('click', () => {
+            document.getElementById('photoInput').click();
+        });
+
+        document.getElementById('photoInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showAlert('Ukuran file maksimal 5MB');
+                    return;
+                }
+                
+                selectedFile = file;
+                
+                // Show preview
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    document.getElementById('previewImage').src = e.target.result;
+                    document.getElementById('photoPreview').classList.remove('hidden');
+                    document.getElementById('uploadPhoto').disabled = false;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        document.getElementById('uploadPhoto').addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            try {
+                // Upload to Firebase Storage
+                const storageRef = storage.ref(`profile-photos/${currentUser.uid}`);
+                const uploadTask = await storageRef.put(selectedFile);
+                const downloadURL = await uploadTask.ref.getDownloadURL();
+                
+                // Update user profile
+                await db.collection('users').doc(currentUser.uid).update({
+                    photoURL: downloadURL,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Update display
+                document.getElementById('profilePhoto').src = downloadURL;
+                document.getElementById('profilePhoto').style.display = 'block';
+                document.getElementById('photoPlaceholder').style.display = 'none';
+                
+                showAlert('Foto profil berhasil diperbarui!', 'success');
+                closePhotoModal();
+                
+            } catch (error) {
+                console.error('Error uploading photo:', error);
+                showAlert('Gagal mengupload foto');
+            }
+        });
+
+        function closePhotoModal() {
+            document.getElementById('photoModal').classList.add('hidden');
+            document.getElementById('photoPreview').classList.add('hidden');
+            document.getElementById('uploadPhoto').disabled = true;
+            selectedFile = null;
+        }
+
+        // Delete account
+        document.getElementById('deleteAccountBtn').addEventListener('click', async () => {
+            if (confirm('Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.')) {
+                if (confirm('Konfirmasi sekali lagi: Hapus akun permanen?')) {
+                    try {
+                        // Delete user data from Firestore
+                        await db.collection('users').doc(currentUser.uid).delete();
+                        
+                        // Delete user account
+                        await currentUser.delete();
+                        
+                        showAlert('Akun berhasil dihapus', 'success');
+                        setTimeout(() => {
+                            window.location.href = 'index.html';
+                        }, 2000);
+                        
+                    } catch (error) {
+                        console.error('Error deleting account:', error);
+                        showAlert('Gagal menghapus akun');
+                    }
+                }
+            }
+        });
+
+        // Logout functionality
+        document.getElementById('logoutBtn').addEventListener('click', async () => {
+            try {
+                await auth.signOut();
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+            }
+        });
+
+        // Utility functions
+        function formatDate(timestamp) {
+            if (!timestamp) return 'Tidak tersedia';
+            const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+            return date.toLocaleDateString('id-ID', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' : 'bg-red-500'} text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('photoModal').addEventListener('click', (e) => {
+            if (e.target.id === 'photoModal') {
+                closePhotoModal();
+            }
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9779cce4a1124109',t:'MTc1NjYxNDcwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

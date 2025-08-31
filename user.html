@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Status Aplikasi - M-PASPOR</title>
+    <style>
+        /* Reset and Base Styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        :root {
+            --primary-blue: #055736;
+            --primary-blue-dark: #045323;
+            --secondary-blue: #03452f;
+            --accent-gold: #ffcc00;
+            --accent-gold-dark: #e6b800;
+            --success-green: #10b981;
+            --warning-orange: #f97316;
+            --error-red: #ef4444;
+            --neutral-gray: #6b7280;
+            --light-gray: #f3f4f6;
+            --white: #ffffff;
+            --dark-text: #333333;
+            --shadow-light: rgba(0, 0, 0, 0.1);
+            --shadow-medium: rgba(0, 0, 0, 0.15);
+            --shadow-heavy: rgba(0, 0, 0, 0.25);
+            --border-radius: 8px;
+            --border-radius-lg: 12px;
+            --transition: all 0.3s ease;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f5f5;
+            color: var(--dark-text);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: var(--white);
+        }
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: var(--white);
+            animation: spin 1s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        /* Top Navigation */
+        .top-nav {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: var(--primary-blue);
+            padding: 12px 16px;
+            box-shadow: 0 2px 10px var(--shadow-medium);
+            z-index: 1000;
+        }
+        .nav-content {
+            max-width: 480px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .logo {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--shadow-light);
+        }
+        .app-title {
+            color: var(--white);
+            font-size: 18px;
+            font-weight: 600;
+        }
+        .nav-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: var(--white);
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .nav-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        /* Container and Layout */
+        .container {
+            max-width: 480px;
+            margin: 0 auto;
+            padding: 0 16px;
+            position: relative;
+            flex: 1;
+        }
+        .page-content {
+            padding-top: 70px;
+            padding-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: calc(100vh - 70px);
+        }
+        /* Cards */
+        .card {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            padding: 24px;
+            margin-bottom: 16px;
+            box-shadow: 0 4px 12px var(--shadow-medium);
+            text-align: center;
+        }
+        .card-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .card-title {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: var(--dark-text);
+        }
+        .card-subtitle {
+            font-size: 16px;
+            color: var(--neutral-gray);
+            margin-bottom: 24px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+            margin: 0 8px;
+        }
+        .btn-primary {
+            background: var(--primary-blue);
+            color: var(--white);
+        }
+        .btn-primary:hover {
+            background: var(--primary-blue-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px var(--shadow-medium);
+        }
+        .btn-secondary {
+            background: var(--white);
+            color: var(--primary-blue);
+            border: 2px solid var(--primary-blue);
+        }
+        .btn-secondary:hover {
+            background: var(--primary-blue);
+            color: var(--white);
+        }
+        /* Status Specific Styles */
+        .status-approved .card-icon {
+            color: var(--success-green);
+        }
+        .status-rejected .card-icon {
+            color: var(--error-red);
+        }
+        .status-pending .card-icon {
+            color: var(--warning-orange);
+        }
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background: var(--white);
+            border-radius: var(--border-radius-lg);
+            width: 90%;
+            max-width: 400px;
+            padding: 24px;
+            box-shadow: 0 4px 20px var(--shadow-heavy);
+            text-align: center;
+        }
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+        .modal-title {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+        .modal-message {
+            font-size: 16px;
+            color: var(--neutral-gray);
+            margin-bottom: 24px;
+        }
+        .payment-details {
+            background: var(--light-gray);
+            border-radius: var(--border-radius);
+            padding: 16px;
+            margin-bottom: 24px;
+            text-align: left;
+        }
+        .payment-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        .payment-row:last-child {
+            margin-bottom: 0;
+            font-weight: 600;
+        }
+        .modal-close {
+            background: var(--light-gray);
+            border: none;
+            color: var(--dark-text);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: var(--transition);
+            margin-left: 8px;
+        }
+        .modal-close:hover {
+            background: var(--neutral-gray);
+        }
+        .payment-modal .modal-icon {
+            color: var(--success-green);
+        }
+        .rejection-modal .modal-icon {
+            color: var(--error-red);
+        }
+        /* Notification */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 16px 20px;
+            border-radius: var(--border-radius);
+            color: var(--white);
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideInRight 0.3s ease-out;
+            max-width: 300px;
+        }
+        .notification.success {
+            background: var(--success-green);
+        }
+        .notification.error {
+            background: var(--error-red);
+        }
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        /* Responsive Design */
+        @media (max-width: 480px) {
+            .container {
+                padding: 0 12px;
+            }
+            .card {
+                padding: 20px;
+            }
+            .btn {
+                display: block;
+                width: 100%;
+                margin: 8px 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <p>Memuat Status Aplikasi...</p>
+    </div>
+    
+    <!-- Top Navigation -->
+    <nav class="top-nav">
+        <div class="nav-content">
+            <div class="logo-container">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/00/Logo_Kementrian_Imigrasi_dan_Pemasyarakatan_%282024%29.png/1200px-Logo_Kementrian_Imigrasi_dan_Pemasyarakatan_%282024%29.png" alt="Passport App Logo" class="logo">
+                <div class="app-title">M-PASPOR</div>
+            </div>
+            <div class="nav-actions">
+                <button class="nav-btn" onclick="goToDashboard()">Dashboard</button>
+                <button class="nav-btn" onclick="logout()">Keluar</button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Content -->
+    <div class="container">
+        <div class="page-content">
+            <!-- Status Card -->
+            <div class="card status-pending" id="statusCard">
+                <div class="card-icon">📋</div>
+                <h2 class="card-title">Memeriksa Status Aplikasi</h2>
+                <p class="card-subtitle">Mohon tunggu sebentar...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal payment-modal">
+        <div class="modal-content">
+            <div class="modal-icon">💳</div>
+            <h3 class="modal-title">Pembayaran Diperlukan</h3>
+            <p class="modal-message">
+                Aplikasi paspor Anda telah disetujui! Silakan lakukan pembayaran untuk melanjutkan proses.
+            </p>
+            <div class="payment-details" id="paymentDetails">
+                <!-- Payment details will be populated by JavaScript -->
+            </div>
+            <button class="btn btn-primary" onclick="proceedToPayment()">Bayar Sekarang</button>
+            <button class="btn btn-secondary modal-close" onclick="closeModal('paymentModal')">Nanti</button>
+        </div>
+    </div>
+    
+    <!-- Rejection Modal -->
+    <div id="rejectionModal" class="modal rejection-modal">
+        <div class="modal-content">
+            <div class="modal-icon">❌</div>
+            <h3 class="modal-title">Aplikasi Ditolak</h3>
+            <p class="modal-message">
+                Maaf, aplikasi paspor Anda tidak dapat disetujui. Silakan periksa kembali dokumen Anda dan ajukan kembali.
+            </p>
+            <button class="btn btn-primary" onclick="reapply()">Ajukan Kembali</button>
+            <button class="btn btn-secondary modal-close" onclick="closeModal('rejectionModal')">Tutup</button>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import Firebase modules
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            signOut
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js';
+        import { 
+            getFirestore, 
+            doc, 
+            getDoc 
+        } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
+        
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyDnFU4YCwV96wAd9wJdhdBNXXpbfNDGrQk",
+            authDomain: "daftar-paspor.firebaseapp.com",
+            projectId: "daftar-paspor",
+            storageBucket: "daftar-paspor.firebasestorage.app",
+            messagingSenderId: "535787439185",
+            appId: "1:535787439185:web:6d80b72fa7e85f8c672470",
+            measurementId: "G-XQYZ43R0P1"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // Make functions globally available
+        window.auth = auth;
+        window.db = db;
+        window.signOut = signOut;
+        window.onAuthStateChanged = onAuthStateChanged;
+        window.doc = doc;
+        window.getDoc = getDoc;
+    </script>
+    
+    <script>
+        // DOM Elements
+        const loadingScreen = document.getElementById('loadingScreen');
+        const statusCard = document.getElementById('statusCard');
+        const paymentModal = document.getElementById('paymentModal');
+        const rejectionModal = document.getElementById('rejectionModal');
+        
+        // Check authentication state
+        function checkAuthState() {
+            console.log('Checking user auth state...');
+            onAuthStateChanged(auth, (user) => {
+                console.log('Auth state changed:', user);
+                if (user) {
+                    // User is authenticated
+                    console.log('User is authenticated:', user.uid);
+                    checkApplicationStatus(user.uid);
+                } else {
+                    // User is not authenticated, redirect to login
+                    console.log('User is not authenticated, redirecting to login');
+                    window.location.href = 'index.html';
+                }
+            });
+        }
+        
+        // Check application status
+        async function checkApplicationStatus(userId) {
+            console.log('Checking application status for user:', userId);
+            try {
+                const userRef = doc(db, 'users', userId);
+                const userDoc = await getDoc(userRef);
+                
+                console.log('User document:', userDoc);
+                
+                if (userDoc.exists()) {
+                    const userData = userDoc.data();
+                    const status = userData.status || 'pending';
+                    
+                    console.log('User data:', userData);
+                    console.log('Application status:', status);
+                    
+                    // Hide loading screen
+                    setTimeout(() => {
+                        loadingScreen.style.display = 'none';
+                        
+                        // Update status card based on application status
+                        if (status === 'approved') {
+                            // Check if payment info exists
+                            if (userData.paymentNumber && userData.paymentDeadline) {
+                                console.log('Application approved with payment info');
+                                showApprovedStatus();
+                                showPaymentModal(userData);
+                            } else {
+                                console.log('Application approved without payment info');
+                                showApprovedStatus();
+                                showNotification('Aplikasi Anda telah disetujui. Menunggu informasi pembayaran.', 'success');
+                            }
+                        } else if (status === 'rejected') {
+                            console.log('Application rejected');
+                            showRejectedStatus();
+                            showRejectionModal();
+                        } else {
+                            console.log('Application pending');
+                            showPendingStatus();
+                        }
+                    }, 1500);
+                } else {
+                    // User document doesn't exist
+                    console.log('User document does not exist');
+                    loadingScreen.style.display = 'none';
+                    showPendingStatus();
+                    showNotification('Data aplikasi tidak ditemukan', 'error');
+                }
+            } catch (error) {
+                console.error('Error checking application status:', error);
+                loadingScreen.style.display = 'none';
+                showPendingStatus();
+                showNotification('Gagal memeriksa status aplikasi', 'error');
+            }
+        }
+        
+        // Show approved status
+        function showApprovedStatus() {
+            console.log('Showing approved status');
+            statusCard.className = 'card status-approved';
+            statusCard.innerHTML = `
+                <div class="card-icon">✅</div>
+                <h2 class="card-title">Aplikasi Disetujui</h2>
+                <p class="card-subtitle">Selamat! Aplikasi paspor Anda telah disetujui.</p>
+                <button class="btn btn-primary" onclick="showPaymentModal()">Lanjut ke Pembayaran</button>
+            `;
+        }
+        
+        // Show rejected status
+        function showRejectedStatus() {
+            console.log('Showing rejected status');
+            statusCard.className = 'card status-rejected';
+            statusCard.innerHTML = `
+                <div class="card-icon">❌</div>
+                <h2 class="card-title">Aplikasi Ditolak</h2>
+                <p class="card-subtitle">Maaf, aplikasi paspor Anda tidak dapat disetujui.</p>
+                <button class="btn btn-primary" onclick="reapply()">Ajukan Kembali</button>
+            `;
+        }
+        
+        // Show pending status
+        function showPendingStatus() {
+            console.log('Showing pending status');
+            statusCard.className = 'card status-pending';
+            statusCard.innerHTML = `
+                <div class="card-icon">⏳</div>
+                <h2 class="card-title">Aplikasi Diproses</h2>
+                <p class="card-subtitle">Aplikasi paspor Anda sedang dalam proses peninjauan.</p>
+                <button class="btn btn-secondary" onclick="refreshStatus()">Periksa Status</button>
+            `;
+        }
+        
+        // Show payment modal
+        function showPaymentModal(userData) {
+            console.log('Showing payment modal with data:', userData);
+            const paymentDetails = document.getElementById('paymentDetails');
+            const paymentDeadline = new Date(userData.paymentDeadline);
+            const formattedDeadline = paymentDeadline.toLocaleDateString('id-ID', {
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            paymentDetails.innerHTML = `
+                <div class="payment-row">
+                    <span>Nomor Pembayaran:</span>
+                    <span>${userData.paymentNumber}</span>
+                </div>
+                <div class="payment-row">
+                    <span>Jumlah:</span>
+                    <span>Rp ${(userData.totalAmount || 0).toLocaleString('id-ID')}</span>
+                </div>
+                <div class="payment-row">
+                    <span>Batas Waktu:</span>
+                    <span>${formattedDeadline}</span>
+                </div>
+            `;
+            
+            paymentModal.style.display = 'flex';
+        }
+        
+        // Show rejection modal
+        function showRejectionModal() {
+            console.log('Showing rejection modal');
+            rejectionModal.style.display = 'flex';
+        }
+        
+        // Close modal
+        function closeModal(modalId) {
+            console.log('Closing modal:', modalId);
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // Proceed to payment
+        function proceedToPayment() {
+            console.log('Proceeding to payment');
+            closeModal('paymentModal');
+            showNotification('Mengalihkan ke halaman pembayaran...', 'success');
+            
+            // Simpan informasi pembayaran ke localStorage
+            const paymentNumber = document.querySelector('#paymentDetails .payment-row:first-child span:last-child').textContent;
+            const totalAmount = document.querySelector('#paymentDetails .payment-row:nth-child(2) span:last-child').textContent.replace('Rp ', '').replace(/\./g, '');
+            
+            localStorage.setItem('paymentNumber', paymentNumber);
+            localStorage.setItem('totalAmount', totalAmount);
+            
+            // Redirect to halaman pembayaran
+            setTimeout(() => {
+                window.location.href = 'pembayaran.html';
+            }, 1500);
+        }
+        
+        // Reapply for passport
+        function reapply() {
+            console.log('Reapplying for passport');
+            closeModal('rejectionModal');
+            showNotification('Mengalihkan ke halaman pendaftaran...', 'success');
+            // In a real app, this would redirect to the application form
+            setTimeout(() => {
+                window.location.href = 'form.html';
+            }, 1500);
+        }
+        
+        // Refresh status
+        function refreshStatus() {
+            console.log('Refreshing status');
+            loadingScreen.style.display = 'flex';
+            const userId = auth.currentUser.uid;
+            checkApplicationStatus(userId);
+        }
+        
+        // Go to dashboard
+        function goToDashboard() {
+            window.location.href = 'dashboard.html';
+        }
+        
+        // Logout function
+        async function logout() {
+            console.log('Logging out');
+            try {
+                await signOut(auth);
+                window.location.href = 'index.html';
+            } catch (error) {
+                console.error('Error signing out:', error);
+                showNotification('Terjadi kesalahan saat logout', 'error');
+            }
+        }
+        
+        // Show notification
+        function showNotification(message, type = 'success') {
+            console.log('Showing notification:', message, type);
+            // Remove existing notifications
+            const existing = document.querySelector('.notification');
+            if (existing) {
+                existing.remove();
+            }
+            
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            // Auto remove after 5 seconds
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.style.animation = 'slideInRight 0.3s ease-out reverse';
+                    setTimeout(() => notification.remove(), 300);
+                }
+            }, 5000);
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM content loaded for user page');
+            // Hide loading screen
+            setTimeout(() => {
+                loadingScreen.style.display = 'none';
+            }, 1000);
+            checkAuthState();
+        });
+        
+        // Make functions globally available
+        window.logout = logout;
+        window.showPaymentModal = showPaymentModal;
+        window.closeModal = closeModal;
+        window.proceedToPayment = proceedToPayment;
+        window.reapply = reapply;
+        window.refreshStatus = refreshStatus;
+        window.goToDashboard = goToDashboard;
+        
+        // Debug: Log global functions
+        console.log('Global functions registered for user page:', {
+            logout,
+            showPaymentModal,
+            closeModal,
+            proceedToPayment,
+            reapply,
+            refreshStatus,
+            goToDashboard
+        });
+    </script>
+</body>
+</html>

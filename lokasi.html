@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pilih Lokasi - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #1e3a8a 0%, #3730a3 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(30, 58, 138, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .loading-spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3b82f6;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .location-card {
+            transition: all 0.3s ease;
+        }
+        .location-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .location-card.selected {
+            border: 2px solid #3b82f6;
+            background: rgba(59, 130, 246, 0.3);
+        }
+        .search-input {
+            background: rgba(255, 255, 255, 0.9);
+            color: #1f2937;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+        }
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.95);
+            border-color: #60a5fa;
+            box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+        }
+        .search-input::placeholder {
+            color: #6b7280;
+        }
+        .region-tab {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .region-tab:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .region-tab.active {
+            background: #3b82f6;
+            border-color: #60a5fa;
+        }
+        .filter-tab {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .filter-tab:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .filter-tab.active {
+            background: #3b82f6;
+            border-color: #60a5fa;
+        }
+        .passport-option {
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .passport-option:hover {
+            background: rgba(255, 255, 255, 0.25);
+        }
+        .passport-option.selected {
+            background: rgba(59, 130, 246, 0.3);
+            border-color: #60a5fa;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg p-8 flex flex-col items-center">
+            <div class="loading-spinner mb-4"></div>
+            <p class="text-gray-700 font-medium">Memproses...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="glass-effect p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <button onclick="goBack()" class="text-white hover:text-blue-200 transition-colors duration-300">
+                    <i class="fas fa-arrow-left text-xl"></i>
+                </button>
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-2xl text-white hidden"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white">M-Paspor</h1>
+                    <p class="text-sm text-blue-200">Pilih Lokasi</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2 text-white">
+                <i class="fas fa-user-circle text-2xl"></i>
+                <span id="userName" class="font-medium">Loading...</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Progress Bar -->
+    <div class="max-w-6xl mx-auto mt-4 px-4">
+        <div class="glass-effect rounded-lg p-4">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-white text-sm font-medium">Progress Pendaftaran</span>
+                <span class="text-white text-sm font-medium">Step 4 dari 4</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2.5">
+                <div class="bg-blue-500 h-2.5 rounded-full" style="width: 100%"></div>
+            </div>
+            <div class="flex justify-between mt-2">
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto text-sm font-bold">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <span class="text-white text-xs mt-1">Data Pribadi</span>
+                </div>
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto text-sm font-bold">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <span class="text-white text-xs mt-1">Dokumen</span>
+                </div>
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-green-500 text-white flex items-center justify-center mx-auto text-sm font-bold">
+                        <i class="fas fa-check"></i>
+                    </div>
+                    <span class="text-white text-xs mt-1">Jadwal</span>
+                </div>
+                <div class="text-center">
+                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center mx-auto text-sm font-bold">4</div>
+                    <span class="text-white text-xs mt-1">Lokasi</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 mt-6">
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <h2 class="text-2xl font-bold text-white mb-2">Lokasi Kantor Imigrasi</h2>
+            <p class="text-blue-200 mb-6">Pilih kantor imigrasi tempat Anda akan mengurus paspor</p>
+            
+            <!-- Search Box -->
+            <div class="relative mb-6">
+                <input type="text" id="searchBox" class="w-full px-4 py-3 pl-12 rounded-lg search-input focus:outline-none" placeholder="Cari lokasi kantor imigrasi...">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-500"></i>
+            </div>
+            
+            <!-- Region Tabs -->
+            <div class="mb-6">
+                <div class="flex overflow-x-auto pb-2 space-x-2" id="regionTabs">
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('jakarta')">DKI Jakarta</button>
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('jabar')">Jawa Barat</button>
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('jateng')">Jawa Tengah</button>
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('jatim')">Jawa Timur</button>
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('sumatera')">Sumatera</button>
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('batam')">Batam</button>
+                    <button class="region-tab px-4 py-2 rounded-lg text-white font-medium whitespace-nowrap" onclick="selectRegion('bali_ntb')">Bali & NTB</button>
+                </div>
+            </div>
+            
+            <!-- Filter Options -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button class="filter-tab px-3 py-1 rounded-full text-white text-sm font-medium" onclick="filterLocations('all')">Semua</button>
+                <button class="filter-tab px-3 py-1 rounded-full text-white text-sm font-medium" onclick="filterLocations('weekend')">Buka Akhir Pekan</button>
+                <button class="filter-tab px-3 py-1 rounded-full text-white text-sm font-medium" onclick="filterLocations('extended')">Jam Operasional Panjang</button>
+            </div>
+            
+            <!-- Location Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="locationGrid">
+                <!-- DKI Jakarta Locations (Default) -->
+                <div class="location-card glass-effect rounded-xl overflow-hidden cursor-pointer" onclick="selectLocation(this, 'jakarta-pusat')">
+                    <div class="h-40 bg-cover bg-center relative" style="background-image: url('https://picsum.photos/seed/jakarta-pusat/400/200.jpg');">
+                        <div class="bg-blue-500 text-white text-xs font-bold px-2 py-1 inline-block absolute mt-2 ml-2 rounded">Terpopuler</div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start mb-3">
+                            <div class="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">Kantor Imigrasi Jakarta Pusat</h3>
+                                <p class="text-blue-200 text-sm">Jl. HR. Rasuna Said Kav. 8-9, Jakarta Selatan</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-blue-200">
+                            <div><i class="fas fa-phone mr-1"></i> (021) 5201234</div>
+                            <div><i class="fas fa-clock mr-1"></i> 08:00 - 16:00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="location-card glass-effect rounded-xl overflow-hidden cursor-pointer" onclick="selectLocation(this, 'jakarta-barat')">
+                    <div class="h-40 bg-cover bg-center" style="background-image: url('https://picsum.photos/seed/jakarta-barat/400/200.jpg');"></div>
+                    <div class="p-4">
+                        <div class="flex items-start mb-3">
+                            <div class="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">Kantor Imigrasi Jakarta Barat</h3>
+                                <p class="text-blue-200 text-sm">Jl. Daan Mogot Km. 11, Jakarta Barat</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-blue-200">
+                            <div><i class="fas fa-phone mr-1"></i> (021) 5405678</div>
+                            <div><i class="fas fa-clock mr-1"></i> 08:00 - 16:00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="location-card glass-effect rounded-xl overflow-hidden cursor-pointer" onclick="selectLocation(this, 'jakarta-timur')">
+                    <div class="h-40 bg-cover bg-center" style="background-image: url('https://picsum.photos/seed/jakarta-timur/400/200.jpg');"></div>
+                    <div class="p-4">
+                        <div class="flex items-start mb-3">
+                            <div class="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">Kantor Imigrasi Jakarta Timur</h3>
+                                <p class="text-blue-200 text-sm">Jl. Raya Bekasi Km. 18, Jakarta Timur</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-blue-200">
+                            <div><i class="fas fa-phone mr-1"></i> (021) 8009876</div>
+                            <div><i class="fas fa-clock mr-1"></i> 08:00 - 16:00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="location-card glass-effect rounded-xl overflow-hidden cursor-pointer" onclick="selectLocation(this, 'tangerang')">
+                    <div class="h-40 bg-cover bg-center relative" style="background-image: url('https://picsum.photos/seed/tangerang/400/200.jpg');">
+                        <div class="bg-green-500 text-white text-xs font-bold px-2 py-1 inline-block absolute mt-2 ml-2 rounded">Buka Sabtu</div>
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start mb-3">
+                            <div class="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">(ULP) Pasar Pagi Mangga Dua</h3>
+                                <p class="text-blue-200 text-sm">Jl. Mangga Dua Raya Lt.5, Ancol</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-blue-200">
+                            <div><i class="fas fa-phone mr-1"></i> (021) 7560123</div>
+                            <div><i class="fas fa-clock mr-1"></i> 09:00 - 14:00</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="location-card glass-effect rounded-xl overflow-hidden cursor-pointer" onclick="selectLocation(this, 'bekasi')">
+                    <div class="h-40 bg-cover bg-center" style="background-image: url('https://picsum.photos/seed/bekasi/400/200.jpg');"></div>
+                    <div class="p-4">
+                        <div class="flex items-start mb-3">
+                            <div class="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">Kantor Imigrasi Bekasi</h3>
+                                <p class="text-blue-200 text-sm">Jl. Ahmad Yani No. 1, Bekasi</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-blue-200">
+                            <div><i class="fas fa-phone mr-1"></i> (021) 8804567</div>
+                            <div><i class="fas fa-clock mr-1"></i> 08:00 - 16:00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Passport Options Section -->
+            <h3 class="text-xl font-bold text-white mt-10 mb-4">Pilih Jenis e-Paspor</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="passport-option rounded-xl p-6 cursor-pointer transition-colors duration-300" onclick="selectPassportOption(this, '5tahun')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-white text-lg font-bold">e-Paspor 5 Tahun</h3>
+                            <div class="text-blue-300 text-2xl font-bold mt-2">Rp 650.000</div>
+                        </div>
+                        <div class="bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">Paling Populer</div>
+                    </div>
+                    <p class="text-blue-200 text-sm">e-Paspor dengan masa berlaku 5 tahun. Harga sudah termasuk biaya administrasi.</p>
+                </div>
+                
+                <div class="passport-option rounded-xl p-6 cursor-pointer transition-colors duration-300" onclick="selectPassportOption(this, '10tahun')">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-white text-lg font-bold">e-Paspor 10 Tahun</h3>
+                            <div class="text-blue-300 text-2xl font-bold mt-2">Rp 950.000</div>
+                        </div>
+                        <div class="bg-green-500 text-white text-xs font-bold px-2 py-1 rounded">Hemat 30%</div>
+                    </div>
+                    <p class="text-blue-200 text-sm">e-Paspor dengan masa berlaku 10 tahun. Harga sudah termasuk biaya administrasi.</p>
+                </div>
+            </div>
+            
+            <div class="flex justify-between">
+                <button class="btn-secondary px-6 py-3 rounded-lg font-bold" onclick="goBack()">
+                    <i class="fas fa-arrow-left mr-2"></i> Kembali
+                </button>
+                <button id="submitBtn" class="btn-primary px-6 py-3 rounded-lg font-bold shadow-md disabled:opacity-50 disabled:cursor-not-allowed" onclick="submitForm()" disabled>
+                    Kirim Permohonan <i class="fas fa-paper-plane ml-2"></i>
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        
+        let currentUser = null;
+        let selectedLocation = null;
+        let selectedPassportOption = null;
+        let currentRegion = 'jakarta';
+        let currentFilter = 'all';
+        
+        // Location data by region
+        const locationData = {
+            jakarta: [
+                {
+                    id: 'jakarta-pusat',
+                    name: 'Kantor Imigrasi Jakarta Pusat',
+                    address: 'Jl. HR. Rasuna Said Kav. 8-9, Jakarta Selatan',
+                    phone: '(021) 5201234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/jakarta-pusat/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'jakarta-barat',
+                    name: 'Kantor Imigrasi Jakarta Barat',
+                    address: 'Jl. Daan Mogot Km. 11, Jakarta Barat',
+                    phone: '(021) 5405678',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/jakarta-barat/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'jakarta-timur',
+                    name: 'Kantor Imigrasi Jakarta Timur',
+                    address: 'Jl. Raya Bekasi Km. 18, Jakarta Timur',
+                    phone: '(021) 8009876',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/jakarta-timur/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'tangerang',
+                    name: '(ULP) Pasar Pagi Mangga Dua',
+                    address: 'Jl. Mangga Dua Raya Lt.5, Ancol',
+                    phone: '(021) 7560123',
+                    hours: '09:00 - 14:00',
+                    image: 'https://picsum.photos/seed/tangerang/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                },
+                {
+                    id: 'bekasi',
+                    name: 'Kantor Imigrasi Bekasi',
+                    address: 'Jl. Ahmad Yani No. 1, Bekasi',
+                    phone: '(021) 8804567',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/bekasi/400/200.jpg',
+                    features: []
+                }
+            ],
+            jabar: [
+                {
+                    id: 'bandung',
+                    name: 'Kantor Imigrasi Bandung',
+                    address: 'Jl. Surapati No. 10, Bandung',
+                    phone: '(022) 4203123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/bandung/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'cimahi',
+                    name: 'Kantor Imigrasi Cimahi',
+                    address: 'Jl. Gatot Subroto No. 78, Cimahi',
+                    phone: '(022) 6654321',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/cimahi/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'depok',
+                    name: 'Kantor Imigrasi Depok',
+                    address: 'Jl. Margonda Raya No. 88, Depok',
+                    phone: '(021) 77211234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/depok/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                },
+                {
+                    id: 'bogor',
+                    name: 'Kantor Imigrasi Bogor',
+                    address: 'Jl. Raya Pajajaran No. 32, Bogor',
+                    phone: '(0251) 8321234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/bogor/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'sukabumi',
+                    name: 'Kantor Imigrasi Sukabumi',
+                    address: 'Jl. Siliwangi No. 15, Sukabumi',
+                    phone: '(0266) 221234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/sukabumi/400/200.jpg',
+                    features: []
+                }
+            ],
+            jateng: [
+                {
+                    id: 'semarang',
+                    name: 'Kantor Imigrasi Semarang',
+                    address: 'Jl. Siliwangi No. 514, Semarang',
+                    phone: '(024) 7605123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/semarang/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'surakarta',
+                    name: 'Kantor Imigrasi Surakarta',
+                    address: 'Jl. Adi Sucipto No. 1, Surakarta',
+                    phone: '(0271) 714123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/surakarta/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'yogyakarta',
+                    name: 'Kantor Imigrasi Yogyakarta',
+                    address: 'Jl. Wolter Monginsidi No. 9, Yogyakarta',
+                    phone: '(0274) 561234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/yogyakarta/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                },
+                {
+                    id: 'pekalongan',
+                    name: 'Kantor Imigrasi Pemalang',
+                    address: 'Jl. Perintis Kemerdekaan, Beji, Kec. Taman 52361',
+                    phone: '(0285) 421234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/pekalongan/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'tegal',
+                    name: 'Kantor Imigrasi Tegal',
+                    address: 'Jl. A. Yani No. 58, Tegal',
+                    phone: '(0283) 356123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/tegal/400/200.jpg',
+                    features: []
+                }
+            ],
+            jatim: [
+                {
+                    id: 'surabaya',
+                    name: 'Kantor Imigrasi Surabaya',
+                    address: 'Jl. Kayoon No. 48, Surabaya',
+                    phone: '(031) 5345123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/surabaya/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'malang',
+                    name: 'Kantor Imigrasi Malang',
+                    address: 'Jl. Tugu No. 1, Malang',
+                    phone: '(0341) 362123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/malang/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'jember',
+                    name: 'Kantor Imigrasi Jember',
+                    address: 'Jl. Gajah Mada No. 15, Jember',
+                    phone: '(0331) 422123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/jember/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                },
+                {
+                    id: 'kediri',
+                    name: 'Kantor Imigrasi Kediri',
+                    address: 'Jl. Dhoho No. 24, Kediri',
+                    phone: '(0354) 681234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/kediri/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'madiun',
+                    name: 'Kantor Imigrasi Madiun',
+                    address: 'Jl. Pahlawan No. 25, Madiun',
+                    phone: '(0351) 452123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/madiun/400/200.jpg',
+                    features: []
+                }
+            ],
+            sumatera: [
+                {
+                    id: 'medan',
+                    name: 'Kantor Imigrasi Medan',
+                    address: 'Jl. Balai Kota No. 1, Medan',
+                    phone: '(061) 4515252',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/medan/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'palembang',
+                    name: 'Kantor Imigrasi Palembang',
+                    address: 'Jl. Demang Lebar Daun No. 11, Palembang',
+                    phone: '(0711) 358123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/palembang/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'padang',
+                    name: 'Kantor Imigrasi Padang',
+                    address: 'Jl. Samudra No. 12, Padang',
+                    phone: '(0751) 22123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/padang/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                },
+                {
+                    id: 'pekanbaru',
+                    name: 'Kantor Imigrasi Pekanbaru',
+                    address: 'Jl. Sudirman No. 200, Pekanbaru',
+                    phone: '(0761) 851234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/pekanbaru/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'lampung',
+                    name: 'Kantor Imigrasi Lampung',
+                    address: 'Jl. Raden Intan No. 89, Bandar Lampung',
+                    phone: '(0721) 252123',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/lampung/400/200.jpg',
+                    features: []
+                }
+            ],
+            batam: [
+                {
+                    id: 'batam',
+                    name: 'Kantor Imigrasi Batam',
+                    address: 'Jl. Engku Putri, Batam Centre, Batam',
+                    phone: '(0778) 461080',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/batam/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'batam-nagoya',
+                    name: 'Kantor Imigrasi Kelas I Batam Nagoya',
+                    address: 'Jl. Imam Bonjol No. 7, Nagoya, Batam',
+                    phone: '(0778) 453042',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/batam-nagoya/400/200.jpg',
+                    badge: 'Jam Panjang',
+                    features: ['extended']
+                },
+                {
+                    id: 'batu-ampar',
+                    name: 'Kantor Imigrasi Batu Ampar',
+                    address: 'Jl. Laksamana Bintan No. 1, Batu Ampar, Batam',
+                    phone: '(0778) 458899',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/batu-ampar/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                },
+                {
+                    id: 'sei-panas',
+                    name: 'Kantor Imigrasi Sei Panas',
+                    address: 'Jl. Sei Panas No. 8, Batam',
+                    phone: '(0778) 432109',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/sei-panas/400/200.jpg',
+                    features: []
+                },
+                {
+                    id: 'nongsa',
+                    name: 'Kantor Imigrasi Nongsa',
+                    address: 'Jl. Hang Lekiu, Nongsa, Batam',
+                    phone: '(0778) 761234',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/nongsa/400/200.jpg',
+                    features: []
+                }
+            ],
+            bali_ntb: [
+                {
+                    id: 'ngurah-rai',
+                    name: 'Kantor Imigrasi Kelas I Khusus Ngurah Rai',
+                    address: 'Jl. Airport Barat, Tuban, Kuta, Badung, Bali',
+                    phone: '(0361) 751038',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/ngurah-rai/400/200.jpg',
+                    badge: 'Terpopuler',
+                    features: ['popular']
+                },
+                {
+                    id: 'mataram',
+                    name: 'Kantor Imigrasi Mataram',
+                    address: 'Jl. Udayana No. 2, Mataram, Nusa Tenggara Barat',
+                    phone: '(0370) 621744',
+                    hours: '08:00 - 16:00',
+                    image: 'https://picsum.photos/seed/mataram/400/200.jpg',
+                    badge: 'Buka Sabtu',
+                    features: ['weekend']
+                }
+            ]
+        };
+        
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                loadUserData();
+                // Set default active region
+                document.querySelector('.region-tab').classList.add('active');
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+        
+        // Load user data
+        async function loadUserData() {
+            try {
+                const userDoc = await db.collection('users').doc(currentUser.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    document.getElementById('userName').textContent = userData.name || currentUser.email;
+                }
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            }
+        }
+        
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize search functionality
+            const searchBox = document.getElementById('searchBox');
+            searchBox.addEventListener('input', function() {
+                searchLocations(this.value);
+            });
+            
+            // Set default active filter
+            document.querySelector('.filter-tab').classList.add('active');
+        });
+        
+        // Select region
+        function selectRegion(region) {
+            // Update active tab
+            document.querySelectorAll('.region-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update current region
+            currentRegion = region;
+            
+            // Load locations for selected region
+            loadLocations(region);
+            
+            // Reset location selection
+            selectedLocation = null;
+            updateSubmitButton();
+        }
+        
+        // Load locations for selected region
+        function loadLocations(region) {
+            const locationGrid = document.getElementById('locationGrid');
+            const locations = locationData[region] || [];
+            
+            // Clear existing locations
+            locationGrid.innerHTML = '';
+            
+            // Add location items
+            locations.forEach(location => {
+                const locationItem = document.createElement('div');
+                locationItem.className = 'location-card glass-effect rounded-xl overflow-hidden cursor-pointer';
+                if (currentFilter !== 'all' && !location.features.includes(currentFilter)) {
+                    locationItem.style.display = 'none';
+                }
+                locationItem.onclick = function() {
+                    selectLocation(this, location.id);
+                };
+                
+                let badgeHtml = '';
+                if (location.badge) {
+                    const badgeColor = location.badge === 'Terpopuler' ? 'bg-blue-500' : 
+                                      location.badge === 'Buka Sabtu' ? 'bg-green-500' : 
+                                      location.badge === 'Jam Panjang' ? 'bg-yellow-500' : 'bg-purple-500';
+                    badgeHtml = `<div class="${badgeColor} text-white text-xs font-bold px-2 py-1 inline-block absolute mt-2 ml-2 rounded">${location.badge}</div>`;
+                }
+                
+                locationItem.innerHTML = `
+                    <div class="h-40 bg-cover bg-center relative" style="background-image: url('${location.image}');">
+                        ${badgeHtml}
+                    </div>
+                    <div class="p-4">
+                        <div class="flex items-start mb-3">
+                            <div class="bg-blue-500 w-10 h-10 rounded-full flex items-center justify-center text-white mr-3">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-bold">${location.name}</h3>
+                                <p class="text-blue-200 text-sm">${location.address}</p>
+                            </div>
+                        </div>
+                        <div class="flex justify-between text-sm text-blue-200">
+                            <div><i class="fas fa-phone mr-1"></i> ${location.phone}</div>
+                            <div><i class="fas fa-clock mr-1"></i> ${location.hours}</div>
+                        </div>
+                    </div>
+                `;
+                
+                locationGrid.appendChild(locationItem);
+            });
+        }
+        
+        // Filter locations
+        function filterLocations(filter) {
+            // Update active filter
+            document.querySelectorAll('.filter-tab').forEach(button => {
+                button.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Update current filter
+            currentFilter = filter;
+            
+            // Reload locations with filter
+            loadLocations(currentRegion);
+        }
+        
+        // Search locations
+        function searchLocations(query) {
+            const locationItems = document.querySelectorAll('.location-card');
+            const lowerQuery = query.toLowerCase();
+            
+            locationItems.forEach(item => {
+                const name = item.querySelector('h3').textContent.toLowerCase();
+                const address = item.querySelector('.text-blue-200').textContent.toLowerCase();
+                
+                if (name.includes(lowerQuery) || address.includes(lowerQuery)) {
+                    item.style.display = '';
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        }
+        
+        // Select location
+        function selectLocation(element, locationId) {
+            // Remove previous selection
+            document.querySelectorAll('.location-card').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select current item
+            element.classList.add('selected');
+            selectedLocation = locationId;
+            updateSubmitButton();
+        }
+        
+        // Select passport option
+        function selectPassportOption(element, option) {
+            // Remove previous selection
+            document.querySelectorAll('.passport-option').forEach(item => {
+                item.classList.remove('selected');
+            });
+            
+            // Select current item
+            element.classList.add('selected');
+            selectedPassportOption = option;
+            updateSubmitButton();
+        }
+        
+        // Update submit button state
+        function updateSubmitButton() {
+            const submitBtn = document.getElementById('submitBtn');
+            if (selectedLocation && selectedPassportOption) {
+                submitBtn.disabled = false;
+            } else {
+                submitBtn.disabled = true;
+            }
+        }
+        
+        // Submit form
+        async function submitForm() {
+            if (!selectedLocation || !selectedPassportOption) {
+                showAlert('Harap pilih lokasi dan jenis paspor');
+                return;
+            }
+            
+            // Show loading screen
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            
+            try {
+                // Get the latest application for this user
+                const applicationsRef = db.collection('applications')
+                    .where('userId', '==', currentUser.uid)
+                    .orderBy('createdAt', 'desc')
+                    .limit(1);
+                
+                const snapshot = await applicationsRef.get();
+                
+                if (snapshot.empty) {
+                    showAlert('Tidak ada permohonan yang ditemukan', 'error');
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                    return;
+                }
+                
+                const applicationDoc = snapshot.docs[0];
+                const applicationId = applicationDoc.id;
+                
+                // Update application with location and passport type
+                await db.collection('applications').doc(applicationId).update({
+                    locationId: selectedLocation,
+                    passportType: selectedPassportOption,
+                    status: 'submitted',
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Get location details
+                const locationDetails = getLocationDetails(selectedLocation);
+                
+                // Save location details to a separate collection
+                await db.collection('applicationLocations').add({
+                    applicationId: applicationId,
+                    ...locationDetails,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // Hide loading screen
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                
+                // Show success message
+                showAlert('Permohonan berhasil dikirim!', 'success');
+                
+                // Redirect to dashboard
+                setTimeout(() => {
+                    window.location.href = 'dashboard-user.html';
+                }, 1500);
+                
+            } catch (error) {
+                console.error('Error submitting form:', error);
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                showAlert('Gagal mengirim permohonan: ' + error.message);
+            }
+        }
+        
+        // Get location details
+        function getLocationDetails(locationId) {
+            for (const region in locationData) {
+                const location = locationData[region].find(loc => loc.id === locationId);
+                if (location) {
+                    return location;
+                }
+            }
+            return null;
+        }
+        
+        // Go back
+        function goBack() {
+            window.history.back();
+        }
+        
+        // Show alert
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
+                type === 'success' ? 'bg-green-500' : 'bg-red-500'
+            } text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Informasi - M-Paspor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .glass-effect {
+            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .info-card {
+            transition: all 0.3s ease;
+        }
+        .info-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+        }
+        .accordion-item {
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .accordion-content.active {
+            max-height: 500px;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+        .timeline-line {
+            position: absolute;
+            left: 20px;
+            top: 50px;
+            bottom: -20px;
+            width: 2px;
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .modal {
+            backdrop-filter: blur(10px);
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- Header -->
+    <header class="glass-effect p-4 shadow-lg">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                <i class="fas fa-passport text-2xl text-white hidden"></i>
+                <div>
+                    <h1 class="text-xl font-bold text-white">M-Paspor</h1>
+                    <p class="text-sm text-indigo-100">Pusat Informasi</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button id="searchBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-search mr-2"></i>Cari Info
+                </button>
+                <a href="dashboard-user.html" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                    <i class="fas fa-arrow-left mr-2"></i>Dashboard
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Search Modal -->
+    <div id="searchModal" class="fixed inset-0 bg-black bg-opacity-50 modal hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold text-gray-800">Cari Informasi</h3>
+                <button id="closeSearchModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <input type="text" id="searchInput" placeholder="Ketik kata kunci..." class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <div id="searchResults" class="max-h-60 overflow-y-auto space-y-2">
+                    <!-- Search results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-6xl mx-auto p-4 mt-6">
+        <!-- Quick Info Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="info-card glass-effect rounded-2xl p-6 text-center fade-in">
+                <i class="fas fa-clock text-4xl text-blue-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-2">Jam Operasional</h3>
+                <p class="text-indigo-200 text-sm">Senin - Jumat: 08:00 - 16:00</p>
+                <p class="text-indigo-200 text-sm">Sabtu: 08:00 - 12:00</p>
+                <p class="text-indigo-200 text-sm">Minggu: Tutup</p>
+            </div>
+            <div class="info-card glass-effect rounded-2xl p-6 text-center fade-in">
+                <i class="fas fa-phone text-4xl text-green-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-2">Kontak Darurat</h3>
+                <p class="text-indigo-200 text-sm">Hotline: 14045</p>
+                <p class="text-indigo-200 text-sm">WhatsApp: 0811-1234-5678</p>
+                <p class="text-indigo-200 text-sm">Email: info@mpaspor.go.id</p>
+            </div>
+            <div class="info-card glass-effect rounded-2xl p-6 text-center fade-in">
+                <i class="fas fa-map-marker-alt text-4xl text-red-300 mb-4"></i>
+                <h3 class="text-xl font-bold text-white mb-2">Lokasi Kantor</h3>
+                <p class="text-indigo-200 text-sm">Jl. Kebon Sirih No. 17</p>
+                <p class="text-indigo-200 text-sm">Jakarta Pusat 10110</p>
+                <button onclick="openMap()" class="mt-2 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs">
+                    Lihat Peta
+                </button>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button class="tab-btn bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors duration-300 active" data-tab="syarat">
+                    <i class="fas fa-list-check mr-2"></i>Syarat & Ketentuan
+                </button>
+                <button class="tab-btn bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg transition-colors duration-300" data-tab="prosedur">
+                    <i class="fas fa-route mr-2"></i>Prosedur
+                </button>
+                <button class="tab-btn bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg transition-colors duration-300" data-tab="biaya">
+                    <i class="fas fa-money-bill mr-2"></i>Biaya
+                </button>
+                <button class="tab-btn bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg transition-colors duration-300" data-tab="faq">
+                    <i class="fas fa-question-circle mr-2"></i>FAQ
+                </button>
+                <button class="tab-btn bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg transition-colors duration-300" data-tab="panduan">
+                    <i class="fas fa-book mr-2"></i>Panduan
+                </button>
+            </div>
+
+            <!-- Syarat & Ketentuan Tab -->
+            <div id="syaratTab" class="tab-content">
+                <h3 class="text-2xl font-bold text-white mb-6">Syarat & Ketentuan Pembuatan Paspor</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Paspor Baru -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-white mb-4">
+                            <i class="fas fa-passport text-blue-300 mr-2"></i>Paspor Baru
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>KTP asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Kartu Keluarga asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Akta Kelahiran asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Pas foto 4x6 cm (2 lembar) background putih</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Surat keterangan kerja (jika bekerja)</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Perpanjangan Paspor -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-white mb-4">
+                            <i class="fas fa-redo text-orange-300 mr-2"></i>Perpanjangan Paspor
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Paspor lama asli</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>KTP asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Pas foto 4x6 cm (2 lembar) background putih</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Fotokopi halaman paspor yang berisi data diri</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Paspor Hilang -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-white mb-4">
+                            <i class="fas fa-exclamation-triangle text-red-300 mr-2"></i>Paspor Hilang
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Surat kehilangan dari kepolisian</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>KTP asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Kartu Keluarga asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Pas foto 4x6 cm (2 lembar) background putih</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Fotokopi paspor lama (jika ada)</span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Paspor Anak -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-white mb-4">
+                            <i class="fas fa-child text-pink-300 mr-2"></i>Paspor Anak (di bawah 17 tahun)
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200">
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Akta Kelahiran anak asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>KTP orang tua asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Kartu Keluarga asli dan fotokopi</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Pas foto anak 4x6 cm (2 lembar)</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check text-green-400 mr-2 mt-1"></i>
+                                <span>Surat pernyataan orang tua</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-yellow-500 bg-opacity-20 border border-yellow-500 border-opacity-30 rounded-lg p-4">
+                    <h5 class="text-yellow-300 font-semibold mb-2">
+                        <i class="fas fa-info-circle mr-2"></i>Catatan Penting:
+                    </h5>
+                    <ul class="text-yellow-200 text-sm space-y-1">
+                        <li>• Semua dokumen harus dalam kondisi baik dan tidak rusak</li>
+                        <li>• Fotokopi dokumen harus jelas dan terbaca</li>
+                        <li>• Pas foto harus terbaru (maksimal 6 bulan)</li>
+                        <li>• Pemohon wajib hadir langsung saat pengambilan paspor</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Prosedur Tab -->
+            <div id="prosedurTab" class="tab-content hidden">
+                <h3 class="text-2xl font-bold text-white mb-6">Prosedur Pembuatan Paspor</h3>
+                
+                <div class="space-y-6">
+                    <div class="relative">
+                        <div class="flex items-start">
+                            <div class="step-number bg-blue-500 text-white">1</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-white mb-2">Pendaftaran Online</h4>
+                                <p class="text-indigo-200 mb-3">Daftar akun dan isi formulir permohonan melalui website M-Paspor</p>
+                                <div class="bg-white bg-opacity-10 rounded-lg p-3">
+                                    <p class="text-indigo-200 text-sm">
+                                        <i class="fas fa-clock mr-1"></i>Estimasi waktu: 15-30 menit
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-line"></div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="flex items-start">
+                            <div class="step-number bg-green-500 text-white">2</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-white mb-2">Upload Dokumen</h4>
+                                <p class="text-indigo-200 mb-3">Upload semua dokumen persyaratan dalam format PDF atau JPG</p>
+                                <div class="bg-white bg-opacity-10 rounded-lg p-3">
+                                    <p class="text-indigo-200 text-sm">
+                                        <i class="fas fa-file-upload mr-1"></i>Maksimal ukuran file: 5MB per dokumen
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-line"></div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="flex items-start">
+                            <div class="step-number bg-yellow-500 text-white">3</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-white mb-2">Verifikasi Admin</h4>
+                                <p class="text-indigo-200 mb-3">Admin akan memverifikasi kelengkapan dan keabsahan dokumen</p>
+                                <div class="bg-white bg-opacity-10 rounded-lg p-3">
+                                    <p class="text-indigo-200 text-sm">
+                                        <i class="fas fa-hourglass-half mr-1"></i>Estimasi waktu: 1-3 hari kerja
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-line"></div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="flex items-start">
+                            <div class="step-number bg-purple-500 text-white">4</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-white mb-2">Pembayaran</h4>
+                                <p class="text-indigo-200 mb-3">Lakukan pembayaran sesuai dengan jenis paspor yang dipilih</p>
+                                <div class="bg-white bg-opacity-10 rounded-lg p-3">
+                                    <p class="text-indigo-200 text-sm">
+                                        <i class="fas fa-credit-card mr-1"></i>Metode: Transfer Bank, E-Wallet, atau Tunai
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-line"></div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="flex items-start">
+                            <div class="step-number bg-indigo-500 text-white">5</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-white mb-2">Jadwal Wawancara</h4>
+                                <p class="text-indigo-200 mb-3">Pilih jadwal wawancara dan foto biometrik di kantor imigrasi</p>
+                                <div class="bg-white bg-opacity-10 rounded-lg p-3">
+                                    <p class="text-indigo-200 text-sm">
+                                        <i class="fas fa-calendar mr-1"></i>Bawa dokumen asli saat wawancara
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="timeline-line"></div>
+                    </div>
+
+                    <div class="relative">
+                        <div class="flex items-start">
+                            <div class="step-number bg-red-500 text-white">6</div>
+                            <div class="flex-1">
+                                <h4 class="text-lg font-semibold text-white mb-2">Pengambilan Paspor</h4>
+                                <p class="text-indigo-200 mb-3">Ambil paspor jadi sesuai jadwal yang telah ditentukan</p>
+                                <div class="bg-white bg-opacity-10 rounded-lg p-3">
+                                    <p class="text-indigo-200 text-sm">
+                                        <i class="fas fa-id-card mr-1"></i>Wajib membawa KTP asli dan tanda terima
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Biaya Tab -->
+            <div id="biayaTab" class="tab-content hidden">
+                <h3 class="text-2xl font-bold text-white mb-6">Biaya Pembuatan Paspor</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Paspor Biasa -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-white mb-4">
+                            <i class="fas fa-passport text-blue-300 mr-2"></i>Paspor Biasa (48 Halaman)
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-200">Paspor Baru</span>
+                                <span class="text-white font-semibold">Rp 350.000</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-200">Perpanjangan</span>
+                                <span class="text-white font-semibold">Rp 300.000</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-200">Penggantian (Hilang/Rusak)</span>
+                                <span class="text-white font-semibold">Rp 400.000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Paspor Tebal -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-xl font-semibold text-white mb-4">
+                            <i class="fas fa-book text-green-300 mr-2"></i>Paspor Tebal (24 Halaman)
+                        </h4>
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-200">Paspor Baru</span>
+                                <span class="text-white font-semibold">Rp 655.000</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-200">Perpanjangan</span>
+                                <span class="text-white font-semibold">Rp 605.000</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="text-indigo-200">Penggantian (Hilang/Rusak)</span>
+                                <span class="text-white font-semibold">Rp 705.000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 bg-blue-500 bg-opacity-20 border border-blue-500 border-opacity-30 rounded-lg p-4">
+                    <h5 class="text-blue-300 font-semibold mb-3">
+                        <i class="fas fa-info-circle mr-2"></i>Informasi Tambahan:
+                    </h5>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-blue-200 text-sm">
+                        <div>
+                            <h6 class="font-medium mb-2">Biaya Tambahan:</h6>
+                            <ul class="space-y-1">
+                                <li>• Layanan Express: +Rp 200.000</li>
+                                <li>• Pengiriman ke rumah: +Rp 50.000</li>
+                                <li>• Foto biometrik: Gratis</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h6 class="font-medium mb-2">Metode Pembayaran:</h6>
+                            <ul class="space-y-1">
+                                <li>• Transfer Bank (BCA, BNI, BRI, Mandiri)</li>
+                                <li>• E-Wallet (GoPay, OVO, DANA)</li>
+                                <li>• Tunai di kantor imigrasi</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ Tab -->
+            <div id="faqTab" class="tab-content hidden">
+                <h3 class="text-2xl font-bold text-white mb-6">Frequently Asked Questions (FAQ)</h3>
+                
+                <div class="space-y-4">
+                    <div class="accordion-item">
+                        <button class="accordion-header w-full text-left p-4 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors duration-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium">Berapa lama proses pembuatan paspor?</span>
+                                <i class="fas fa-chevron-down text-white transform transition-transform duration-300"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 text-indigo-200">
+                                <p>Proses pembuatan paspor biasanya memakan waktu 5-7 hari kerja setelah wawancara dan foto biometrik. Untuk layanan express, paspor dapat selesai dalam 2-3 hari kerja dengan biaya tambahan.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button class="accordion-header w-full text-left p-4 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors duration-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium">Apakah bisa membuat paspor tanpa KTP?</span>
+                                <i class="fas fa-chevron-down text-white transform transition-transform duration-300"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 text-indigo-200">
+                                <p>Tidak bisa. KTP adalah dokumen wajib untuk pembuatan paspor. Jika KTP hilang, Anda harus mengurus KTP baru terlebih dahulu di Dukcapil setempat sebelum mengajukan permohonan paspor.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button class="accordion-header w-full text-left p-4 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors duration-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium">Bagaimana jika paspor hilang di luar negeri?</span>
+                                <i class="fas fa-chevron-down text-white transform transition-transform duration-300"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 text-indigo-200">
+                                <p>Segera hubungi Kedutaan Besar atau Konsulat RI terdekat untuk mengurus Surat Perjalanan Laksana Paspor (SPLP). Setelah kembali ke Indonesia, buat laporan kehilangan ke polisi dan ajukan permohonan paspor baru.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button class="accordion-header w-full text-left p-4 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors duration-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium">Apakah bisa perpanjang paspor yang sudah expired?</span>
+                                <i class="fas fa-chevron-down text-white transform transition-transform duration-300"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 text-indigo-200">
+                                <p>Paspor yang sudah expired tidak bisa diperpanjang. Anda harus mengajukan permohonan paspor baru dengan membawa paspor lama sebagai dokumen pendukung.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button class="accordion-header w-full text-left p-4 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors duration-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium">Bisakah orang lain mengambil paspor saya?</span>
+                                <i class="fas fa-chevron-down text-white transform transition-transform duration-300"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 text-indigo-200">
+                                <p>Tidak bisa. Paspor hanya boleh diambil oleh pemilik langsung dengan membawa KTP asli dan tanda terima. Untuk anak di bawah 17 tahun, harus didampingi orang tua/wali.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="accordion-item">
+                        <button class="accordion-header w-full text-left p-4 bg-white bg-opacity-10 rounded-lg hover:bg-opacity-20 transition-colors duration-300">
+                            <div class="flex items-center justify-between">
+                                <span class="text-white font-medium">Apa perbedaan paspor biasa dan tebal?</span>
+                                <i class="fas fa-chevron-down text-white transform transition-transform duration-300"></i>
+                            </div>
+                        </button>
+                        <div class="accordion-content">
+                            <div class="p-4 text-indigo-200">
+                                <p>Paspor biasa memiliki 24 halaman, cocok untuk perjalanan sesekali. Paspor tebal memiliki 48 halaman, cocok untuk yang sering bepergian ke luar negeri karena memiliki lebih banyak halaman untuk cap imigrasi.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Panduan Tab -->
+            <div id="panduanTab" class="tab-content hidden">
+                <h3 class="text-2xl font-bold text-white mb-6">Panduan Lengkap</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Tips Foto -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-white mb-4">
+                            <i class="fas fa-camera text-blue-300 mr-2"></i>Tips Foto Paspor
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200 text-sm">
+                            <li>• Background putih polos</li>
+                            <li>• Ukuran 4x6 cm</li>
+                            <li>• Wajah menghadap kamera langsung</li>
+                            <li>• Tidak memakai kacamata hitam</li>
+                            <li>• Ekspresi natural, tidak tersenyum berlebihan</li>
+                            <li>• Pakaian sopan dan rapi</li>
+                            <li>• Foto terbaru (maksimal 6 bulan)</li>
+                        </ul>
+                    </div>
+
+                    <!-- Tips Wawancara -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-white mb-4">
+                            <i class="fas fa-comments text-green-300 mr-2"></i>Tips Wawancara
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200 text-sm">
+                            <li>• Datang tepat waktu</li>
+                            <li>• Bawa semua dokumen asli</li>
+                            <li>• Berpakaian sopan dan rapi</li>
+                            <li>• Jawab pertanyaan dengan jujur</li>
+                            <li>• Siapkan tujuan perjalanan yang jelas</li>
+                            <li>• Bawa bukti keuangan jika diperlukan</li>
+                            <li>• Tetap tenang dan percaya diri</li>
+                        </ul>
+                    </div>
+
+                    <!-- Dokumen Digital -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-white mb-4">
+                            <i class="fas fa-file-pdf text-red-300 mr-2"></i>Format Dokumen Digital
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200 text-sm">
+                            <li>• Format: PDF atau JPG</li>
+                            <li>• Ukuran maksimal: 5MB per file</li>
+                            <li>• Resolusi minimal: 300 DPI</li>
+                            <li>• Scan dengan kualitas tinggi</li>
+                            <li>• Pastikan teks terbaca jelas</li>
+                            <li>• Tidak boleh terpotong</li>
+                            <li>• Nama file sesuai jenis dokumen</li>
+                        </ul>
+                    </div>
+
+                    <!-- Hal yang Harus Dihindari -->
+                    <div class="bg-white bg-opacity-10 rounded-lg p-6">
+                        <h4 class="text-lg font-semibold text-white mb-4">
+                            <i class="fas fa-exclamation-triangle text-yellow-300 mr-2"></i>Hal yang Harus Dihindari
+                        </h4>
+                        <ul class="space-y-2 text-indigo-200 text-sm">
+                            <li>• Memberikan data palsu</li>
+                            <li>• Dokumen fotokopi tidak jelas</li>
+                            <li>• Terlambat datang wawancara</li>
+                            <li>• Tidak membawa dokumen asli</li>
+                            <li>• Menggunakan calo/perantara</li>
+                            <li>• Tidak mengecek jadwal</li>
+                            <li>• Lupa membawa tanda terima</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Download Panduan -->
+                <div class="mt-6 bg-indigo-500 bg-opacity-20 border border-indigo-500 border-opacity-30 rounded-lg p-6">
+                    <h5 class="text-indigo-300 font-semibold mb-4">
+                        <i class="fas fa-download mr-2"></i>Download Panduan Lengkap
+                    </h5>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <button onclick="downloadGuide('formulir')" class="bg-blue-500 hover:bg-blue-600 text-white py-3 px-4 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-file-pdf mr-2"></i>Formulir Permohonan
+                        </button>
+                        <button onclick="downloadGuide('checklist')" class="bg-green-500 hover:bg-green-600 text-white py-3 px-4 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-list-check mr-2"></i>Checklist Dokumen
+                        </button>
+                        <button onclick="downloadGuide('panduan')" class="bg-purple-500 hover:bg-purple-600 text-white py-3 px-4 rounded-lg transition-colors duration-300">
+                            <i class="fas fa-book mr-2"></i>Panduan Lengkap
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Section -->
+        <div class="glass-effect rounded-2xl p-6 fade-in">
+            <h3 class="text-2xl font-bold text-white mb-6">Butuh Bantuan Lebih Lanjut?</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center">
+                    <i class="fas fa-headset text-3xl text-blue-300 mb-3"></i>
+                    <h4 class="text-white font-semibold mb-2">Live Chat</h4>
+                    <p class="text-indigo-200 text-sm mb-3">Chat langsung dengan customer service</p>
+                    <button onclick="openLiveChat()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        Mulai Chat
+                    </button>
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-envelope text-3xl text-green-300 mb-3"></i>
+                    <h4 class="text-white font-semibold mb-2">Email Support</h4>
+                    <p class="text-indigo-200 text-sm mb-3">Kirim pertanyaan via email</p>
+                    <button onclick="sendEmail()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        Kirim Email
+                    </button>
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-phone text-3xl text-red-300 mb-3"></i>
+                    <h4 class="text-white font-semibold mb-2">Telepon</h4>
+                    <p class="text-indigo-200 text-sm mb-3">Hubungi hotline 24/7</p>
+                    <button onclick="callHotline()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        Hubungi Sekarang
+                    </button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBKu6dfVVLFLkq7w7PCj20gkarMJG-aCg0",
+            authDomain: "arisan-online-b90a2.firebaseapp.com",
+            projectId: "arisan-online-b90a2",
+            storageBucket: "arisan-online-b90a2.firebasestorage.app",
+            messagingSenderId: "77633850940",
+            appId: "1:77633850940:web:df0454a209121dc51d7d39",
+            measurementId: "G-0REH8Q0W2D"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Check authentication
+        auth.onAuthStateChanged((user) => {
+            if (!user) {
+                // Allow access to information page even without login
+                console.log('User not logged in, but allowing access to information');
+            }
+        });
+
+        // Tab functionality
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabName = btn.dataset.tab;
+                
+                // Update active tab button
+                document.querySelectorAll('.tab-btn').forEach(b => {
+                    b.classList.remove('bg-blue-500');
+                    b.classList.add('bg-white', 'bg-opacity-20');
+                });
+                btn.classList.remove('bg-white', 'bg-opacity-20');
+                btn.classList.add('bg-blue-500');
+                
+                // Show/hide tab content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.add('hidden');
+                });
+                document.getElementById(tabName + 'Tab').classList.remove('hidden');
+            });
+        });
+
+        // Accordion functionality
+        document.querySelectorAll('.accordion-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const content = header.nextElementSibling;
+                const icon = header.querySelector('i');
+                
+                // Toggle content
+                content.classList.toggle('active');
+                
+                // Rotate icon
+                if (content.classList.contains('active')) {
+                    icon.style.transform = 'rotate(180deg)';
+                } else {
+                    icon.style.transform = 'rotate(0deg)';
+                }
+            });
+        });
+
+        // Search functionality
+        document.getElementById('searchBtn').addEventListener('click', () => {
+            document.getElementById('searchModal').classList.remove('hidden');
+            document.getElementById('searchInput').focus();
+        });
+
+        document.getElementById('closeSearchModal').addEventListener('click', () => {
+            document.getElementById('searchModal').classList.add('hidden');
+        });
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const resultsContainer = document.getElementById('searchResults');
+            
+            if (query.length < 2) {
+                resultsContainer.innerHTML = '';
+                return;
+            }
+
+            // Search through all content
+            const searchableContent = [
+                { title: 'Syarat Paspor Baru', content: 'KTP, Kartu Keluarga, Akta Kelahiran, Pas foto', tab: 'syarat' },
+                { title: 'Syarat Perpanjangan', content: 'Paspor lama, KTP, Pas foto', tab: 'syarat' },
+                { title: 'Prosedur Pendaftaran', content: 'Daftar online, upload dokumen, verifikasi', tab: 'prosedur' },
+                { title: 'Biaya Paspor Biasa', content: 'Rp 350.000 untuk paspor baru', tab: 'biaya' },
+                { title: 'Biaya Paspor Tebal', content: 'Rp 655.000 untuk paspor baru', tab: 'biaya' },
+                { title: 'Lama Proses', content: '5-7 hari kerja setelah wawancara', tab: 'faq' },
+                { title: 'Tips Foto Paspor', content: 'Background putih, ukuran 4x6 cm', tab: 'panduan' }
+            ];
+
+            const results = searchableContent.filter(item => 
+                item.title.toLowerCase().includes(query) || 
+                item.content.toLowerCase().includes(query)
+            );
+
+            resultsContainer.innerHTML = results.map(result => `
+                <div class="p-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors duration-300" onclick="goToTab('${result.tab}')">
+                    <h5 class="font-medium text-gray-800">${result.title}</h5>
+                    <p class="text-gray-600 text-sm">${result.content}</p>
+                </div>
+            `).join('');
+
+            if (results.length === 0) {
+                resultsContainer.innerHTML = '<p class="text-gray-500 text-center py-4">Tidak ada hasil ditemukan</p>';
+            }
+        });
+
+        function goToTab(tabName) {
+            document.getElementById('searchModal').classList.add('hidden');
+            
+            // Click the corresponding tab
+            const tabBtn = document.querySelector(`[data-tab="${tabName}"]`);
+            if (tabBtn) {
+                tabBtn.click();
+            }
+        }
+
+        // Utility functions
+        function openMap() {
+            window.open('https://maps.google.com/?q=Jl.+Kebon+Sirih+No.+17+Jakarta+Pusat', '_blank');
+        }
+
+        function openLiveChat() {
+            showAlert('Fitur live chat akan segera tersedia', 'info');
+        }
+
+        function sendEmail() {
+            window.open('mailto:info@mpaspor.go.id?subject=Pertanyaan tentang Paspor', '_blank');
+        }
+
+        function callHotline() {
+            window.open('tel:14045', '_blank');
+        }
+
+        function downloadGuide(type) {
+            const guides = {
+                formulir: 'Formulir_Permohonan_Paspor.pdf',
+                checklist: 'Checklist_Dokumen_Paspor.pdf',
+                panduan: 'Panduan_Lengkap_Paspor.pdf'
+            };
+            
+            showAlert(`Download ${guides[type]} akan segera dimulai`, 'success');
+            
+            // Simulate download
+            setTimeout(() => {
+                const link = document.createElement('a');
+                link.href = '#';
+                link.download = guides[type];
+                link.click();
+            }, 1000);
+        }
+
+        function showAlert(message, type = 'error') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${type === 'success' ? 'bg-green-500' : type === 'info' ? 'bg-blue-500' : 'bg-red-500'} text-white`;
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.remove();
+            }, 3000);
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('searchModal').addEventListener('click', (e) => {
+            if (e.target.id === 'searchModal') {
+                document.getElementById('searchModal').classList.add('hidden');
+            }
+        });
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + K to open search
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                document.getElementById('searchBtn').click();
+            }
+            
+            // Escape to close modals
+            if (e.key === 'Escape') {
+                document.getElementById('searchModal').classList.add('hidden');
+            }
+        });
+
+        // Add fade-in animation to elements when they come into view
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('fade-in');
+                }
+            });
+        }, observerOptions);
+
+        // Observe all elements that should fade in
+        document.querySelectorAll('.info-card, .glass-effect').forEach(el => {
+            observer.observe(el);
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9779daca63abfcf7',t:'MTc1NjYxNTI3Ny4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
