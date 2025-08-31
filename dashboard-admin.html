@@ -106,7 +106,6 @@
             </nav>
         </div>
     </div>
-
     <!-- Main Content -->
     <div id="mainContent" class="ml-64 transition-all duration-300">
         <!-- Header -->
@@ -135,7 +134,6 @@
                 </div>
             </div>
         </header>
-
         <!-- Dashboard Section -->
         <div id="dashboardSection" class="p-6">
             <!-- Stats Cards -->
@@ -161,7 +159,6 @@
                     <p class="text-indigo-200">Total Pengguna</p>
                 </div>
             </div>
-
             <!-- Recent Applications -->
             <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
                 <div class="flex items-center justify-between mb-6">
@@ -174,7 +171,6 @@
                     <!-- Recent applications will be loaded here -->
                 </div>
             </div>
-
             <!-- Quick Actions -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="showSection('applications')">
@@ -194,7 +190,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Applications Section -->
         <div id="applicationsSection" class="p-6 hidden">
             <div class="glass-effect rounded-2xl p-6 fade-in">
@@ -234,7 +229,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Users Section -->
         <div id="usersSection" class="p-6 hidden">
             <div class="glass-effect rounded-2xl p-6 fade-in">
@@ -263,7 +257,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Payments Section -->
         <div id="paymentsSection" class="p-6 hidden">
             <div class="glass-effect rounded-2xl p-6 fade-in">
@@ -293,7 +286,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Reports Section -->
         <div id="reportsSection" class="p-6 hidden">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -329,7 +321,6 @@
                 </div>
             </div>
         </div>
-
         <!-- Settings Section -->
         <div id="settingsSection" class="p-6 hidden">
             <div class="glass-effect rounded-2xl p-6 fade-in">
@@ -408,10 +399,9 @@
             </div>
         </div>
     </div>
-
     <!-- Application Detail Modal -->
     <div id="applicationModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
-        <div class="bg-white rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-96 overflow-y-auto">
+        <div class="bg-white rounded-2xl p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold text-gray-800">Detail Permohonan</h3>
                 <button onclick="closeApplicationModal()" class="text-gray-500 hover:text-gray-700">
@@ -423,7 +413,6 @@
             </div>
         </div>
     </div>
-
     <!-- Test Popup -->
     <div id="testPopupModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
         <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4 text-center popup-animation">
@@ -440,7 +429,6 @@
             </div>
         </div>
     </div>
-
     <script>
         // Firebase Configuration
         const firebaseConfig = {
@@ -452,14 +440,14 @@
             appId: "1:77633850940:web:df0454a209121dc51d7d39",
             measurementId: "G-0REH8Q0W2D"
         };
-
+        
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-
+        
         let currentAdmin = null;
-
+        
         // Check authentication and admin role
         auth.onAuthStateChanged(async (user) => {
             if (user) {
@@ -482,7 +470,7 @@
                 window.location.href = 'index.html';
             }
         });
-
+        
         // Load dashboard data
         async function loadDashboardData() {
             try {
@@ -496,7 +484,7 @@
                 showAlert('Gagal memuat data dashboard', 'error');
             }
         }
-
+        
         // Load statistics
         async function loadStats() {
             try {
@@ -505,37 +493,37 @@
                     db.collection('users').where('role', '!=', 'admin').get(),
                     db.collection('payments').get()
                 ]);
-
+                
                 const applications = [];
                 applicationsSnapshot.forEach(doc => {
                     applications.push({ id: doc.id, ...doc.data() });
                 });
-
+                
                 const payments = [];
                 paymentsSnapshot.forEach(doc => {
                     payments.push({ id: doc.id, ...doc.data() });
                 });
-
+                
                 const totalApplications = applications.length;
                 const pendingApplications = applications.filter(app => app.status === 'pending').length;
                 const approvedApplications = applications.filter(app => app.status === 'approved').length;
                 const totalUsers = usersSnapshot.size;
-
+                
                 document.getElementById('totalApplicationsCount').textContent = totalApplications;
                 document.getElementById('pendingApplicationsCount').textContent = pendingApplications;
                 document.getElementById('approvedApplicationsCount').textContent = approvedApplications;
                 document.getElementById('totalUsersCount').textContent = totalUsers;
-
+                
                 // Update notification count
                 if (pendingApplications > 0) {
                     document.getElementById('notificationCount').textContent = pendingApplications;
                     document.getElementById('notificationCount').classList.remove('hidden');
                 }
-
+                
                 // Update payment stats
                 const totalRevenue = payments.reduce((sum, payment) => sum + (payment.amount || 0), 0);
                 const avgPayment = payments.length > 0 ? totalRevenue / payments.length : 0;
-
+                
                 document.getElementById('totalRevenue').textContent = formatCurrency(totalRevenue);
                 document.getElementById('totalPayments').textContent = payments.length;
                 document.getElementById('avgPayment').textContent = formatCurrency(avgPayment);
@@ -543,7 +531,7 @@
                 console.error('Error loading stats:', error);
             }
         }
-
+        
         // Load recent applications
         async function loadRecentApplications() {
             try {
@@ -551,12 +539,12 @@
                     .orderBy('createdAt', 'desc')
                     .limit(5)
                     .get();
-
+                
                 const applications = [];
                 snapshot.forEach(doc => {
                     applications.push({ id: doc.id, ...doc.data() });
                 });
-
+                
                 const container = document.getElementById('recentApplications');
                 
                 if (applications.length === 0) {
@@ -567,7 +555,7 @@
                     `;
                     return;
                 }
-
+                
                 container.innerHTML = applications.map(app => `
                     <div class="bg-white bg-opacity-10 rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-colors duration-300" onclick="showApplicationDetail('${app.id}')">
                         <div class="flex items-center justify-between">
@@ -591,7 +579,7 @@
                 console.error('Error loading recent applications:', error);
             }
         }
-
+        
         // Load all applications
         async function loadApplications() {
             try {
@@ -601,14 +589,14 @@
                 if (statusFilter) {
                     query = query.where('status', '==', statusFilter);
                 }
-
+                
                 const snapshot = await query.get();
                 const applications = [];
                 
                 snapshot.forEach(doc => {
                     applications.push({ id: doc.id, ...doc.data() });
                 });
-
+                
                 const tbody = document.getElementById('applicationsTable');
                 
                 if (applications.length === 0) {
@@ -621,7 +609,7 @@
                     `;
                     return;
                 }
-
+                
                 tbody.innerHTML = applications.map(app => `
                     <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
                         <td class="py-3 px-4">${app.applicationNumber || app.id.substring(0, 8).toUpperCase()}</td>
@@ -652,7 +640,7 @@
                 console.error('Error loading applications:', error);
             }
         }
-
+        
         // Load users
         async function loadUsers() {
             try {
@@ -660,12 +648,12 @@
                     .where('role', '!=', 'admin')
                     .orderBy('createdAt', 'desc')
                     .get();
-
+                
                 const users = [];
                 snapshot.forEach(doc => {
                     users.push({ id: doc.id, ...doc.data() });
                 });
-
+                
                 const tbody = document.getElementById('usersTable');
                 
                 if (users.length === 0) {
@@ -678,7 +666,7 @@
                     `;
                     return;
                 }
-
+                
                 tbody.innerHTML = users.map(user => `
                     <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
                         <td class="py-3 px-4">${user.name || 'Nama tidak tersedia'}</td>
@@ -700,14 +688,14 @@
                 console.error('Error loading users:', error);
             }
         }
-
+        
         // Load payments
         async function loadPayments() {
             try {
                 const snapshot = await db.collection('payments')
                     .orderBy('createdAt', 'desc')
                     .get();
-
+                
                 const payments = [];
                 const applicationIds = [];
                 
@@ -718,11 +706,12 @@
                         applicationIds.push(payment.applicationId);
                     }
                 });
-
+                
                 // Get application details
                 const applicationPromises = applicationIds.map(id => 
                     db.collection('applications').doc(id).get()
                 );
+                
                 const applicationDocs = await Promise.all(applicationPromises);
                 
                 const applications = {};
@@ -731,7 +720,7 @@
                         applications[doc.id] = doc.data();
                     }
                 });
-
+                
                 const tbody = document.getElementById('paymentsTable');
                 
                 if (payments.length === 0) {
@@ -744,7 +733,7 @@
                     `;
                     return;
                 }
-
+                
                 tbody.innerHTML = payments.map(payment => {
                     const app = applications[payment.applicationId] || {};
                     return `
@@ -766,14 +755,25 @@
                 console.error('Error loading payments:', error);
             }
         }
-
+        
         // Show application detail
         async function showApplicationDetail(applicationId) {
             try {
                 const doc = await db.collection('applications').doc(applicationId).get();
+                
                 if (doc.exists) {
                     const app = doc.data();
                     const modalContent = document.getElementById('applicationModalContent');
+                    
+                    // Get documents for this application
+                    const documentsSnapshot = await db.collection('documents')
+                        .where('applicationId', '==', applicationId)
+                        .get();
+                    
+                    const documents = [];
+                    documentsSnapshot.forEach(doc => {
+                        documents.push({ id: doc.id, ...doc.data() });
+                    });
                     
                     modalContent.innerHTML = `
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -825,6 +825,21 @@
                         </div>
                         
                         <div class="mt-6">
+                            <h4 class="text-lg font-semibold text-gray-800 mb-4">Dokumen Terkait</h4>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                ${documents.map(doc => `
+                                    <div class="border rounded-lg p-3">
+                                        <div class="text-center">
+                                            <i class="fas fa-file-alt text-2xl text-blue-500 mb-2"></i>
+                                            <p class="text-sm font-medium">${getDocumentTypeText(doc.type)}</p>
+                                            <a href="${doc.url}" target="_blank" class="text-blue-500 text-xs hover:underline">Lihat Dokumen</a>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                        
+                        <div class="mt-6">
                             <h4 class="text-lg font-semibold text-gray-800 mb-4">Aksi Admin</h4>
                             <div class="flex flex-wrap gap-3">
                                 <button onclick="updateApplicationStatus('${applicationId}', 'verified')" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
@@ -858,7 +873,7 @@
                 showAlert('Gagal memuat detail permohonan', 'error');
             }
         }
-
+        
         // Update application status
         async function updateApplicationStatus(applicationId, newStatus) {
             try {
@@ -866,7 +881,7 @@
                     status: newStatus,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
-
+                
                 // Add timestamp for specific status
                 if (newStatus === 'verified') {
                     updateData.verifiedAt = firebase.firestore.FieldValue.serverTimestamp();
@@ -875,9 +890,9 @@
                 } else if (newStatus === 'approved') {
                     updateData.approvedAt = firebase.firestore.FieldValue.serverTimestamp();
                 }
-
+                
                 await db.collection('applications').doc(applicationId).update(updateData);
-
+                
                 // Create notification for user
                 const appDoc = await db.collection('applications').doc(applicationId).get();
                 if (appDoc.exists) {
@@ -891,7 +906,7 @@
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                 }
-
+                
                 showAlert(`Status berhasil diubah menjadi: ${getStatusText(newStatus)}`, 'success');
                 loadApplications();
                 loadStats();
@@ -901,7 +916,7 @@
                 showAlert('Gagal mengubah status permohonan', 'error');
             }
         }
-
+        
         // Save admin notes
         async function saveAdminNotes(applicationId) {
             try {
@@ -910,14 +925,13 @@
                     adminNotes: notes,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-
                 showAlert('Catatan berhasil disimpan', 'success');
             } catch (error) {
                 console.error('Error saving admin notes:', error);
                 showAlert('Gagal menyimpan catatan', 'error');
             }
         }
-
+        
         // Setup realtime updates
         function setupRealtimeUpdates() {
             // Listen for new applications
@@ -933,17 +947,17 @@
                 });
             });
         }
-
+        
         // Navigation functions
         function showSection(sectionName) {
             // Hide all sections
             document.querySelectorAll('[id$="Section"]').forEach(section => {
                 section.classList.add('hidden');
             });
-
+            
             // Show selected section
             document.getElementById(sectionName + 'Section').classList.remove('hidden');
-
+            
             // Update page title
             const titles = {
                 dashboard: 'Dashboard Admin',
@@ -954,13 +968,13 @@
                 settings: 'Pengaturan'
             };
             document.getElementById('pageTitle').textContent = titles[sectionName];
-
+            
             // Update active nav item
             document.querySelectorAll('.nav-item').forEach(item => {
                 item.classList.remove('bg-white', 'bg-opacity-20');
             });
             event.target.closest('.nav-item').classList.add('bg-white', 'bg-opacity-20');
-
+            
             // Load section-specific data
             if (sectionName === 'applications') {
                 loadApplications();
@@ -972,7 +986,7 @@
                 loadReports();
             }
         }
-
+        
         // Load reports
         async function loadReports() {
             try {
@@ -982,7 +996,7 @@
                 snapshot.forEach(doc => {
                     applications.push({ id: doc.id, ...doc.data() });
                 });
-
+                
                 // Monthly stats
                 const monthlyStats = {};
                 applications.forEach(app => {
@@ -992,7 +1006,7 @@
                         monthlyStats[monthKey] = (monthlyStats[monthKey] || 0) + 1;
                     }
                 });
-
+                
                 const monthlyStatsContainer = document.getElementById('monthlyStats');
                 monthlyStatsContainer.innerHTML = Object.entries(monthlyStats)
                     .sort(([a], [b]) => b.localeCompare(a))
@@ -1003,13 +1017,13 @@
                             <span class="text-white font-semibold">${count} permohonan</span>
                         </div>
                     `).join('');
-
+                
                 // Status stats
                 const statusStats = {};
                 applications.forEach(app => {
                     statusStats[app.status] = (statusStats[app.status] || 0) + 1;
                 });
-
+                
                 const statusStatsContainer = document.getElementById('statusStats');
                 statusStatsContainer.innerHTML = Object.entries(statusStats)
                     .map(([status, count]) => `
@@ -1022,7 +1036,7 @@
                 console.error('Error loading reports:', error);
             }
         }
-
+        
         // Save settings
         async function saveSettings() {
             try {
@@ -1033,7 +1047,7 @@
                     thickPassportFee: document.getElementById('thickPassportFee').value,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
-
+                
                 await db.collection('settings').doc('general').set(settings, { merge: true });
                 showAlert('Pengaturan berhasil disimpan', 'success');
             } catch (error) {
@@ -1041,7 +1055,7 @@
                 showAlert('Gagal menyimpan pengaturan', 'error');
             }
         }
-
+        
         // Save popup settings
         async function savePopupSettings() {
             try {
@@ -1052,7 +1066,7 @@
                     icon: document.getElementById('popupIcon').value,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 };
-
+                
                 await db.collection('settings').doc('paymentPopup').set(popupSettings, { merge: true });
                 showAlert('Pengaturan popup berhasil disimpan', 'success');
             } catch (error) {
@@ -1060,7 +1074,7 @@
                 showAlert('Gagal menyimpan pengaturan popup', 'error');
             }
         }
-
+        
         // Test popup
         function testPopup() {
             const title = document.getElementById('popupTitle').value;
@@ -1072,12 +1086,12 @@
             document.getElementById('testPopupMessage').textContent = message;
             document.getElementById('testPopupModal').classList.remove('hidden');
         }
-
+        
         // Close test popup
         function closeTestPopup() {
             document.getElementById('testPopupModal').classList.add('hidden');
         }
-
+        
         // Load popup settings
         async function loadPopupSettings() {
             try {
@@ -1093,7 +1107,7 @@
                 console.error('Error loading popup settings:', error);
             }
         }
-
+        
         // Utility functions
         function getStatusText(status) {
             const statusMap = {
@@ -1106,7 +1120,7 @@
             };
             return statusMap[status] || status;
         }
-
+        
         function getPaymentMethodText(method) {
             const methodMap = {
                 'bank': 'Transfer Bank',
@@ -1115,7 +1129,17 @@
             };
             return methodMap[method] || method;
         }
-
+        
+        function getDocumentTypeText(type) {
+            const typeMap = {
+                'ktpFile': 'KTP',
+                'kkFile': 'Kartu Keluarga',
+                'birthCertFile': 'Akta Kelahiran',
+                'photoFile': 'Foto Paspor'
+            };
+            return typeMap[type] || type;
+        }
+        
         function formatDate(timestamp) {
             if (!timestamp) return '-';
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -1127,7 +1151,7 @@
                 minute: '2-digit'
             });
         }
-
+        
         function formatCurrency(amount) {
             return new Intl.NumberFormat('id-ID', {
                 style: 'currency',
@@ -1135,15 +1159,15 @@
                 minimumFractionDigits: 0
             }).format(amount);
         }
-
+        
         function closeApplicationModal() {
             document.getElementById('applicationModal').classList.add('hidden');
         }
-
+        
         function viewUserDetail(userId) {
             showAlert('Fitur detail pengguna akan segera tersedia', 'info');
         }
-
+        
         function showAlert(message, type = 'info') {
             const alertDiv = document.createElement('div');
             alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
@@ -1158,14 +1182,14 @@
                 alertDiv.remove();
             }, 3000);
         }
-
+        
         // Event listeners
         document.getElementById('logoutBtn').addEventListener('click', () => {
             auth.signOut().then(() => {
                 window.location.href = 'index.html';
             });
         });
-
+        
         document.getElementById('sidebarToggle').addEventListener('click', () => {
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('mainContent');
@@ -1179,27 +1203,27 @@
                 mainContent.classList.add('ml-64');
             }
         });
-
+        
         document.getElementById('statusFilter')?.addEventListener('change', loadApplications);
-
+        
         // Close modal when clicking outside
         document.getElementById('applicationModal').addEventListener('click', (e) => {
             if (e.target.id === 'applicationModal') {
                 closeApplicationModal();
             }
         });
-
+        
         document.getElementById('testPopupModal').addEventListener('click', (e) => {
             if (e.target.id === 'testPopupModal') {
                 closeTestPopup();
             }
         });
-
+        
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', () => {
             // Set default active nav item
             document.querySelector('.nav-item').classList.add('bg-white', 'bg-opacity-20');
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'977a2669c5235ce4',t:'MTc1NjYxODM3NS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
