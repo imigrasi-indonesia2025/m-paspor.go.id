@@ -50,141 +50,233 @@
             0%, 100% { opacity: 1; }
             50% { opacity: 0.5; }
         }
+        .sidebar-item {
+            transition: all 0.3s ease;
+        }
+        .sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #ffffff;
+        }
+        .sidebar-item.active {
+            background: rgba(255, 255, 255, 0.2);
+            border-left: 4px solid #ffffff;
+        }
+        .sidebar-collapsed {
+            width: 70px;
+        }
+        .sidebar-expanded {
+            width: 250px;
+        }
+        .content-expanded {
+            margin-left: 250px;
+        }
+        .content-collapsed {
+            margin-left: 70px;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen">
-    <!-- Header -->
-    <header class="glass-effect p-4 shadow-lg">
-        <div class="max-w-6xl mx-auto flex items-center justify-between">
-            <div class="flex items-center space-x-3">
+    <!-- Sidebar -->
+    <div id="sidebar" class="fixed left-0 top-0 h-full glass-effect sidebar-expanded transition-all duration-300 z-40">
+        <div class="p-4 flex items-center justify-between">
+            <div id="logoContainer" class="flex items-center space-x-3">
                 <img src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQuK3v8yFY27ZnWk7-Wk46B09GxLZhYvtw-gA&s" alt="M-Paspor Logo" class="w-10 h-10 object-contain" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                 <i class="fas fa-passport text-2xl text-white hidden"></i>
-                <div>
+                <div id="logoText" class="block">
                     <h1 class="text-xl font-bold text-white">M-Paspor</h1>
-                    <p class="text-sm text-indigo-100">Dashboard User</p>
+                    <p class="text-xs text-indigo-100">Dashboard User</p>
                 </div>
             </div>
-            <div class="flex items-center space-x-4">
-                <div class="relative">
-                    <button id="notificationBtn" class="text-white hover:text-indigo-200 transition-colors duration-300">
-                        <i class="fas fa-bell text-xl"></i>
-                        <span id="notificationDot" class="notification-dot hidden"></span>
-                    </button>
-                </div>
-                <div class="flex items-center space-x-2 text-white">
-                    <i class="fas fa-user-circle text-2xl"></i>
-                    <span id="userName" class="font-medium">Loading...</span>
-                </div>
-                <button id="logoutBtn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                    <i class="fas fa-sign-out-alt mr-2"></i>Logout
+            <button id="toggleSidebar" class="text-white hover:text-indigo-200 focus:outline-none">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        
+        <nav class="mt-6">
+            <div class="px-4 py-2 text-xs font-semibold text-indigo-200 uppercase tracking-wider">Menu Utama</div>
+            <a href="#" onclick="navigateTo('dashboard-user.html')" class="sidebar-item active flex items-center px-4 py-3 text-white">
+                <i class="fas fa-home w-5"></i>
+                <span class="ml-3 sidebar-text">Dashboard</span>
+            </a>
+            <a href="#" onclick="navigateTo('profil.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-user w-5"></i>
+                <span class="ml-3 sidebar-text">Profil Saya</span>
+            </a>
+            <a href="#" onclick="navigateTo('form.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-file-alt w-5"></i>
+                <span class="ml-3 sidebar-text">Permohonan Baru</span>
+            </a>
+            <a href="#" onclick="navigateTo('riwayat.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-history w-5"></i>
+                <span class="ml-3 sidebar-text">Riwayat Permohonan</span>
+            </a>
+            
+            <div class="px-4 py-2 mt-4 text-xs font-semibold text-indigo-200 uppercase tracking-wider">Layanan</div>
+            <a href="#" onclick="navigateTo('pembayaran.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-credit-card w-5"></i>
+                <span class="ml-3 sidebar-text">Pembayaran</span>
+            </a>
+            <a href="#" onclick="navigateTo('pload-bukti.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-upload w-5"></i>
+                <span class="ml-3 sidebar-text">Upload Bukti</span>
+            </a>
+            <a href="#" onclick="navigateTo('lokasi.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-map-marker-alt w-5"></i>
+                <span class="ml-3 sidebar-text">Lokasi Kantor</span>
+            </a>
+            
+            <div class="px-4 py-2 mt-4 text-xs font-semibold text-indigo-200 uppercase tracking-wider">Informasi</div>
+            <a href="#" onclick="navigateTo('informasi.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-info-circle w-5"></i>
+                <span class="ml-3 sidebar-text">Panduan & FAQ</span>
+            </a>
+            <a href="#" onclick="navigateTo('user.html')" class="sidebar-item flex items-center px-4 py-3 text-white">
+                <i class="fas fa-users w-5"></i>
+                <span class="ml-3 sidebar-text">Pengaturan Akun</span>
+            </a>
+            
+            <div class="absolute bottom-4 w-full px-4">
+                <button id="logoutBtn" class="sidebar-item flex items-center w-full px-4 py-3 text-white">
+                    <i class="fas fa-sign-out-alt w-5"></i>
+                    <span class="ml-3 sidebar-text">Logout</span>
                 </button>
             </div>
-        </div>
-    </header>
-
-    <!-- Notification Panel -->
-    <div id="notificationPanel" class="fixed top-16 right-4 w-80 bg-white rounded-lg shadow-xl z-50 hidden">
-        <div class="p-4 border-b">
-            <h3 class="font-semibold text-gray-800">Notifikasi</h3>
-        </div>
-        <div id="notificationList" class="max-h-64 overflow-y-auto">
-            <!-- Notifications will be loaded here -->
-        </div>
+        </nav>
     </div>
 
     <!-- Main Content -->
-    <main class="max-w-6xl mx-auto p-4 mt-6">
-        <!-- Welcome Section -->
-        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
-            <div class="flex items-center justify-between">
+    <div id="mainContent" class="content-expanded transition-all duration-300">
+        <!-- Header -->
+        <header class="glass-effect p-4 shadow-lg">
+            <div class="max-w-6xl mx-auto flex items-center justify-between">
                 <div>
-                    <h2 class="text-2xl font-bold text-white mb-2">Selamat Datang!</h2>
-                    <p class="text-indigo-200">Kelola permohonan paspor Anda dengan mudah</p>
+                    <h2 class="text-xl font-bold text-white">Dashboard</h2>
+                    <p class="text-sm text-indigo-200">Selamat datang kembali!</p>
                 </div>
-                <div class="text-right">
-                    <p class="text-indigo-200 text-sm">Status Akun</p>
-                    <span class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">Aktif</span>
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button id="notificationBtn" class="text-white hover:text-indigo-200 transition-colors duration-300">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notificationDot" class="notification-dot hidden"></span>
+                        </button>
+                    </div>
+                    <div class="flex items-center space-x-2 text-white">
+                        <i class="fas fa-user-circle text-2xl"></i>
+                        <span id="userName" class="font-medium">Loading...</span>
+                    </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Quick Actions -->
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="window.location.href='form.html'">
-                <i class="fas fa-user-plus text-4xl text-blue-300 mb-4"></i>
-                <h3 class="text-lg font-bold text-white mb-2">Daftar</h3>
-                <p class="text-indigo-200 text-sm">Buat akun baru untuk layanan paspor</p>
+        </header>
+        
+        <!-- Notification Panel -->
+        <div id="notificationPanel" class="fixed top-16 right-4 w-80 bg-white rounded-lg shadow-xl z-50 hidden">
+            <div class="p-4 border-b">
+                <h3 class="font-semibold text-gray-800">Notifikasi</h3>
             </div>
-            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="window.location.href='form.html'">
-                <i class="fas fa-plus-circle text-4xl text-green-300 mb-4"></i>
-                <h3 class="text-lg font-bold text-white mb-2">Permohonan Baru</h3>
-                <p class="text-indigo-200 text-sm">Ajukan permohonan paspor baru</p>
-            </div>
-            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="checkStatus()">
-                <i class="fas fa-search text-4xl text-yellow-300 mb-4"></i>
-                <h3 class="text-lg font-bold text-white mb-2">Cek Status</h3>
-                <p class="text-indigo-200 text-sm">Pantau status permohonan Anda</p>
-            </div>
-            <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="window.location.href='informasi.html'">
-                <i class="fas fa-info-circle text-4xl text-purple-300 mb-4"></i>
-                <h3 class="text-lg font-bold text-white mb-2">Informasi</h3>
-                <p class="text-indigo-200 text-sm">Panduan dan FAQ lengkap</p>
+            <div id="notificationList" class="max-h-64 overflow-y-auto">
+                <!-- Notifications will be loaded here -->
             </div>
         </div>
 
-        <!-- Status Permohonan -->
-        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold text-white">Status Permohonan Terkini</h3>
-                <button onclick="refreshStatus()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
-                    <i class="fas fa-sync-alt mr-2"></i>Refresh
-                </button>
+        <!-- Page Content -->
+        <main class="max-w-6xl mx-auto p-4 mt-6">
+            <!-- Welcome Section -->
+            <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-2xl font-bold text-white mb-2">Selamat Datang!</h2>
+                        <p class="text-indigo-200">Kelola permohonan paspor Anda dengan mudah</p>
+                    </div>
+                    <div class="text-right">
+                        <p class="text-indigo-200 text-sm">Status Akun</p>
+                        <span class="bg-green-500 text-white px-3 py-1 rounded-full text-sm font-medium">Aktif</span>
+                    </div>
+                </div>
             </div>
-            <div id="currentApplications" class="space-y-4">
-                <!-- Current applications will be loaded here -->
+            
+            <!-- Quick Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="navigateTo('form.html')">
+                    <i class="fas fa-plus-circle text-4xl text-green-300 mb-4"></i>
+                    <h3 class="text-lg font-bold text-white mb-2">Permohonan Baru</h3>
+                    <p class="text-indigo-200 text-sm">Ajukan permohonan paspor baru</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="navigateTo('riwayat.html')">
+                    <i class="fas fa-history text-4xl text-blue-300 mb-4"></i>
+                    <h3 class="text-lg font-bold text-white mb-2">Riwayat</h3>
+                    <p class="text-indigo-200 text-sm">Lihat riwayat permohonan</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="checkStatus()">
+                    <i class="fas fa-search text-4xl text-yellow-300 mb-4"></i>
+                    <h3 class="text-lg font-bold text-white mb-2">Cek Status</h3>
+                    <p class="text-indigo-200 text-sm">Pantau status permohonan Anda</p>
+                </div>
+                <div class="card-hover glass-effect rounded-2xl p-6 text-center fade-in cursor-pointer" onclick="navigateTo('pembayaran.html')">
+                    <i class="fas fa-credit-card text-4xl text-purple-300 mb-4"></i>
+                    <h3 class="text-lg font-bold text-white mb-2">Pembayaran</h3>
+                    <p class="text-indigo-200 text-sm">Lakukan pembayaran permohonan</p>
+                </div>
             </div>
-        </div>
-
-        <!-- Riwayat Permohonan -->
-        <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
-            <h3 class="text-xl font-bold text-white mb-6">Riwayat Permohonan</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-white">
-                    <thead>
-                        <tr class="border-b border-white border-opacity-20">
-                            <th class="text-left py-3 px-4">No. Permohonan</th>
-                            <th class="text-left py-3 px-4">Jenis</th>
-                            <th class="text-left py-3 px-4">Tanggal</th>
-                            <th class="text-left py-3 px-4">Status</th>
-                            <th class="text-left py-3 px-4">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTable">
-                        <!-- History will be loaded here -->
-                    </tbody>
-                </table>
+            
+            <!-- Status Permohonan -->
+            <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Status Permohonan Terkini</h3>
+                    <button onclick="refreshStatus()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-300">
+                        <i class="fas fa-sync-alt mr-2"></i>Refresh
+                    </button>
+                </div>
+                <div id="currentApplications" class="space-y-4">
+                    <!-- Current applications will be loaded here -->
+                </div>
             </div>
-        </div>
-
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-            <div class="glass-effect rounded-2xl p-6 text-center fade-in">
-                <i class="fas fa-file-alt text-3xl text-blue-300 mb-3"></i>
-                <h4 class="text-2xl font-bold text-white" id="totalApplications">0</h4>
-                <p class="text-indigo-200">Total Permohonan</p>
+            
+            <!-- Riwayat Permohonan -->
+            <div class="glass-effect rounded-2xl p-6 mb-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-xl font-bold text-white">Riwayat Permohonan</h3>
+                    <button onclick="navigateTo('riwayat.html')" class="text-blue-300 hover:text-blue-100 text-sm">
+                        Lihat Semua <i class="fas fa-arrow-right ml-1"></i>
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-white">
+                        <thead>
+                            <tr class="border-b border-white border-opacity-20">
+                                <th class="text-left py-3 px-4">No. Permohonan</th>
+                                <th class="text-left py-3 px-4">Jenis</th>
+                                <th class="text-left py-3 px-4">Tanggal</th>
+                                <th class="text-left py-3 px-4">Status</th>
+                                <th class="text-left py-3 px-4">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTable">
+                            <!-- History will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <div class="glass-effect rounded-2xl p-6 text-center fade-in">
-                <i class="fas fa-clock text-3xl text-yellow-300 mb-3"></i>
-                <h4 class="text-2xl font-bold text-white" id="pendingApplications">0</h4>
-                <p class="text-indigo-200">Sedang Diproses</p>
+            
+            <!-- Quick Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                <div class="glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-file-alt text-3xl text-blue-300 mb-3"></i>
+                    <h4 class="text-2xl font-bold text-white" id="totalApplications">0</h4>
+                    <p class="text-indigo-200">Total Permohonan</p>
+                </div>
+                <div class="glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-clock text-3xl text-yellow-300 mb-3"></i>
+                    <h4 class="text-2xl font-bold text-white" id="pendingApplications">0</h4>
+                    <p class="text-indigo-200">Sedang Diproses</p>
+                </div>
+                <div class="glass-effect rounded-2xl p-6 text-center fade-in">
+                    <i class="fas fa-check-circle text-3xl text-green-300 mb-3"></i>
+                    <h4 class="text-2xl font-bold text-white" id="completedApplications">0</h4>
+                    <p class="text-indigo-200">Selesai</p>
+                </div>
             </div>
-            <div class="glass-effect rounded-2xl p-6 text-center fade-in">
-                <i class="fas fa-check-circle text-3xl text-green-300 mb-3"></i>
-                <h4 class="text-2xl font-bold text-white" id="completedApplications">0</h4>
-                <p class="text-indigo-200">Selesai</p>
-            </div>
-        </div>
-    </main>
+        </main>
+    </div>
 
     <!-- Status Detail Modal -->
     <div id="statusModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
@@ -212,14 +304,13 @@
             appId: "1:77633850940:web:df0454a209121dc51d7d39",
             measurementId: "G-0REH8Q0W2D"
         };
-
+        
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
-
         let currentUser = null;
-
+        
         // Check authentication
         auth.onAuthStateChanged((user) => {
             if (user) {
@@ -232,7 +323,36 @@
                 window.location.href = 'index.html';
             }
         });
-
+        
+        // Toggle sidebar
+        document.getElementById('toggleSidebar').addEventListener('click', function() {
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('mainContent');
+            const logoText = document.getElementById('logoText');
+            const sidebarTexts = document.querySelectorAll('.sidebar-text');
+            
+            if (sidebar.classList.contains('sidebar-expanded')) {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                mainContent.classList.remove('content-expanded');
+                mainContent.classList.add('content-collapsed');
+                logoText.classList.add('hidden');
+                sidebarTexts.forEach(text => text.classList.add('hidden'));
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+                mainContent.classList.remove('content-collapsed');
+                mainContent.classList.add('content-expanded');
+                logoText.classList.remove('hidden');
+                sidebarTexts.forEach(text => text.classList.remove('hidden'));
+            }
+        });
+        
+        // Navigation function
+        function navigateTo(page) {
+            window.location.href = page;
+        }
+        
         // Load user data
         async function loadUserData() {
             try {
@@ -245,7 +365,7 @@
                 console.error('Error loading user data:', error);
             }
         }
-
+        
         // Load applications
         async function loadApplications() {
             try {
@@ -259,7 +379,6 @@
                 snapshot.forEach(doc => {
                     applications.push({ id: doc.id, ...doc.data() });
                 });
-
                 displayCurrentApplications(applications);
                 displayApplicationHistory(applications);
                 updateStats(applications);
@@ -268,27 +387,25 @@
                 showAlert('Gagal memuat data permohonan', 'error');
             }
         }
-
+        
         // Display current applications
         function displayCurrentApplications(applications) {
             const container = document.getElementById('currentApplications');
             const currentApps = applications.filter(app => 
                 ['pending', 'verified', 'processing'].includes(app.status)
             );
-
             if (currentApps.length === 0) {
                 container.innerHTML = `
                     <div class="text-center py-8">
                         <i class="fas fa-inbox text-4xl text-indigo-300 mb-4"></i>
                         <p class="text-indigo-200">Belum ada permohonan aktif</p>
-                        <button onclick="window.location.href='form.html'" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
+                        <button onclick="navigateTo('form.html')" class="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-lg transition-colors duration-300">
                             Buat Permohonan Baru
                         </button>
                     </div>
                 `;
                 return;
             }
-
             container.innerHTML = currentApps.map(app => `
                 <div class="bg-white bg-opacity-10 rounded-lg p-4 cursor-pointer hover:bg-opacity-20 transition-colors duration-300" onclick="showStatusDetail('${app.id}')">
                     <div class="flex items-center justify-between">
@@ -309,7 +426,7 @@
                 </div>
             `).join('');
         }
-
+        
         // Display application history
         function displayApplicationHistory(applications) {
             const tbody = document.getElementById('historyTable');
@@ -324,8 +441,7 @@
                 `;
                 return;
             }
-
-            tbody.innerHTML = applications.slice(0, 10).map(app => `
+            tbody.innerHTML = applications.slice(0, 5).map(app => `
                 <tr class="border-b border-white border-opacity-10 hover:bg-white hover:bg-opacity-5">
                     <td class="py-3 px-4">${app.applicationNumber || app.id.substring(0, 8).toUpperCase()}</td>
                     <td class="py-3 px-4">${app.applicationType || 'Paspor Baru'}</td>
@@ -343,7 +459,7 @@
                 </tr>
             `).join('');
         }
-
+        
         // Update statistics
         function updateStats(applications) {
             const total = applications.length;
@@ -353,12 +469,11 @@
             const completed = applications.filter(app => 
                 ['approved', 'completed'].includes(app.status)
             ).length;
-
             document.getElementById('totalApplications').textContent = total;
             document.getElementById('pendingApplications').textContent = pending;
             document.getElementById('completedApplications').textContent = completed;
         }
-
+        
         // Load notifications
         async function loadNotifications() {
             try {
@@ -374,7 +489,6 @@
                 snapshot.forEach(doc => {
                     notifications.push({ id: doc.id, ...doc.data() });
                 });
-
                 displayNotifications(notifications);
                 
                 if (notifications.length > 0) {
@@ -384,7 +498,7 @@
                 console.error('Error loading notifications:', error);
             }
         }
-
+        
         // Display notifications
         function displayNotifications(notifications) {
             const container = document.getElementById('notificationList');
@@ -397,7 +511,6 @@
                 `;
                 return;
             }
-
             container.innerHTML = notifications.map(notif => `
                 <div class="p-4 border-b hover:bg-gray-50 cursor-pointer" onclick="markAsRead('${notif.id}')">
                     <h5 class="font-medium text-gray-800">${notif.title}</h5>
@@ -406,7 +519,7 @@
                 </div>
             `).join('');
         }
-
+        
         // Setup realtime updates
         function setupRealtimeUpdates() {
             // Listen for application updates
@@ -420,7 +533,6 @@
                         }
                     });
                 });
-
             // Listen for new notifications
             db.collection('notifications')
                 .where('userId', '==', currentUser.uid)
@@ -433,7 +545,7 @@
                     });
                 });
         }
-
+        
         // Show status detail
         async function showStatusDetail(applicationId) {
             try {
@@ -488,7 +600,7 @@
                 showAlert('Gagal memuat detail permohonan', 'error');
             }
         }
-
+        
         // Generate timeline
         function generateTimeline(app) {
             const steps = [
@@ -498,7 +610,6 @@
                 { key: 'approved', label: 'Disetujui', date: app.approvedAt },
                 { key: 'completed', label: 'Selesai', date: app.completedAt }
             ];
-
             return steps.map(step => {
                 const isCompleted = step.date;
                 const isCurrent = app.status === step.key;
@@ -514,7 +625,7 @@
                 `;
             }).join('');
         }
-
+        
         // Utility functions
         function getStatusText(status) {
             const statusMap = {
@@ -527,7 +638,7 @@
             };
             return statusMap[status] || status;
         }
-
+        
         function getStatusDescription(status) {
             const descMap = {
                 'pending': 'Dokumen sedang diperiksa admin',
@@ -539,7 +650,7 @@
             };
             return descMap[status] || '';
         }
-
+        
         function formatDate(timestamp) {
             if (!timestamp) return '-';
             const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -551,22 +662,22 @@
                 minute: '2-digit'
             });
         }
-
+        
         function checkStatus() {
             loadApplications();
             showAlert('Status permohonan telah diperbarui', 'success');
         }
-
+        
         function refreshStatus() {
             loadApplications();
             loadNotifications();
             showAlert('Data telah diperbarui', 'success');
         }
-
+        
         function closeStatusModal() {
             document.getElementById('statusModal').classList.add('hidden');
         }
-
+        
         async function markAsRead(notificationId) {
             try {
                 await db.collection('notifications').doc(notificationId).update({
@@ -578,7 +689,7 @@
                 console.error('Error marking notification as read:', error);
             }
         }
-
+        
         function showAlert(message, type = 'info') {
             const alertDiv = document.createElement('div');
             alertDiv.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 ${
@@ -593,19 +704,19 @@
                 alertDiv.remove();
             }, 3000);
         }
-
+        
         // Event listeners
         document.getElementById('logoutBtn').addEventListener('click', () => {
             auth.signOut().then(() => {
                 window.location.href = 'index.html';
             });
         });
-
+        
         document.getElementById('notificationBtn').addEventListener('click', () => {
             const panel = document.getElementById('notificationPanel');
             panel.classList.toggle('hidden');
         });
-
+        
         // Close notification panel when clicking outside
         document.addEventListener('click', (e) => {
             const panel = document.getElementById('notificationPanel');
@@ -615,7 +726,7 @@
                 panel.classList.add('hidden');
             }
         });
-
+        
         // Close modal when clicking outside
         document.getElementById('statusModal').addEventListener('click', (e) => {
             if (e.target.id === 'statusModal') {
@@ -623,5 +734,5 @@
             }
         });
     </script>
-<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9779f14b9001fde8',t:'MTc1NjYxNjE5OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</body>
 </html>
